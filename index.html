@@ -7,7 +7,6 @@
     
     <!-- iOS Web App 設定 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <!-- 改為 default 以便在淺色背景顯示深色狀態欄文字 -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="白石角出行">
     
@@ -51,8 +50,8 @@
             color: var(--text-main);
             -webkit-font-smoothing: antialiased;
             
-            /* Web App 關鍵佈局：鎖定視窗高度，禁止整體滾動 */
-            height: 100dvh; /* 使用 dynamic viewport height */
+            /* Web App 關鍵佈局 */
+            height: 100dvh;
             overflow: hidden; 
             display: flex;
             flex-direction: column;
@@ -62,19 +61,19 @@
             padding-bottom: 0; 
         }
 
-        /* 主容器：彈性佈局 */
+        /* 主容器 */
         .container { 
             display: flex;
             flex-direction: column;
-            flex: 1; /* 佔滿剩餘空間 */
+            flex: 1; 
             width: 100%;
             max-width: 500px; 
             margin: 0 auto;
-            overflow: hidden; /* 內部滾動 */
+            overflow: hidden; 
             position: relative;
         }
 
-        /* 標題區：固定高度，不隨內容滾動 */
+        /* 標題區 */
         header { 
             flex-shrink: 0;
             padding: 10px 16px; 
@@ -83,14 +82,13 @@
         h1 { font-size: 1.2rem; margin: 0; font-weight: 600; }
         .update-time { font-size: 0.8rem; color: var(--text-sub); margin-top: 4px; }
 
-        /* --- 內容區域：獨立滾動 --- */
+        /* --- 內容區域 --- */
         .tab-content { 
             display: none; 
-            flex: 1; /* 填滿 Header 與 TabBar 之間的空間 */
-            overflow-y: auto; /* 內容過長時垂直滾動 */
-            -webkit-overflow-scrolling: touch; /* iOS 慣性滾動 */
+            flex: 1; 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch; 
             padding: 4px 16px;
-            /* 底部留空，避免被 TabBar 遮擋 */
             padding-bottom: calc(var(--tab-bar-height) + 20px + env(safe-area-inset-bottom)); 
         }
         
@@ -160,10 +158,10 @@
         .kmb-header { background: linear-gradient(135deg, #E3001B, #C20017); }
         .mtr-header { background: linear-gradient(135deg, #0072BC, #005691); }
         
-        /* 藥丸標籤 */
+        /* 藥丸標籤 (九巴) */
         .stop-detail { font-size: 0.75rem; color: var(--kmb-red); background: white; padding: 4px 10px; border-radius: 12px; font-weight: 700; }
         
-        /* 港鐵藥丸 (右側) */
+        /* 藥丸標籤 (港鐵 - 右側) */
         .stop-detail-mtr { 
             font-size: 0.75rem; 
             color: var(--mtr-blue); 
@@ -179,7 +177,7 @@
 
         .plat-badge { font-size: 0.75rem; background: var(--mtr-blue); color: white; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
 
-        /* --- 下拉選單 --- */
+        /* --- 美化版下拉選單 --- */
         .station-select {
             appearance: none;
             -webkit-appearance: none;
@@ -227,7 +225,7 @@
             justify-content: space-around; 
             align-items: center; 
             z-index: 1000; 
-            padding-bottom: env(safe-area-inset-bottom); /* 避開 Home Bar */
+            padding-bottom: env(safe-area-inset-bottom); 
         }
         .tab-item { flex: 1; text-align: center; padding: 8px 0; color: #C7C7CC; cursor: pointer; font-size: 0.7rem; transition: color 0.2s; }
         .tab-item.active { color: var(--accent); transform: scale(1.05); }
@@ -262,7 +260,8 @@
             <div class="card-header kmb-header">
                 <span class="icon">🚌</span>
                 <span class="card-title">九巴 272A</span>
-                <span id="kmb-stop-badge-1" class="stop-detail">博研路</span>
+                <!-- 修改：頁面1 九巴藥丸 -> 白石角(循環線) -->
+                <span id="kmb-stop-badge-1" class="stop-detail">白石角(循環線)</span>
             </div>
             <div id="kmb-list-1" class="card-content">
                 <div class="status-msg">搜尋中...</div>
@@ -289,9 +288,7 @@
         <div class="card">
             <div class="card-header mtr-header">
                 <span class="icon">🚇</span>
-                
                 <span class="header-text">港鐵</span>
-                
                 <select id="station-select" class="station-select" onchange="switchReturnStation(this.value)">
                     <optgroup label="市區/南面 (往羅湖/落馬洲)">
                         <option value="ADM" selected>金鐘</option>
@@ -313,9 +310,7 @@
                         <option value="LMC">落馬洲</option>
                     </optgroup>
                 </select>
-                
                 <span class="header-text">站</span>
-
                 <span id="dest-label" class="stop-detail-mtr">往羅湖/落馬洲</span>
             </div>
             <div id="mtr-list-2" class="card-content">
@@ -327,7 +322,8 @@
             <div class="card-header kmb-header">
                 <span class="icon">🚌</span>
                 <span class="card-title">九巴 272A</span>
-                <span class="stop-detail">大學站總站</span>
+                <!-- 修改：頁面2 九巴藥丸 -> 白石角(循環線) -->
+                <span class="stop-detail">白石角(循環線)</span>
             </div>
             <div id="kmb-list-2" class="card-content">
                 <div class="status-msg">搜尋中...</div>
@@ -347,18 +343,13 @@
     </div>
     <div class="tab-item" onclick="switchTab(2)">
         <span class="tab-icon">🛤️</span>
-        回程/轉車
+        我要回家
     </div>
 </nav>
 
 <script>
     // --- 防止雙指縮放等手勢 ---
     document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
-    // --- 防止頁面被過度拖拉 (橡皮筋效果) ---
-    document.body.addEventListener('touchmove', function(e) { 
-        if(e.target.closest('.scrollable')) return; 
-        // 這裡可視情況加入更嚴格的防止滾動邏輯，但 CSS overflow:hidden 已處理大部分
-    }, { passive: false });
 
     // --- 工具 ---
     const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('zh-HK', {hour:'2-digit', minute:'2-digit', hour12:false}) : '--:--';
@@ -446,7 +437,8 @@
                 }
                 if (!validKmbStopId_PokYin && stops.length) validKmbStopId_PokYin = stops[0];
             }
-            renderKMB(listEl, validKmbStopId_PokYin, '往大學站');
+            // 修改：強制顯示 "博研路"
+            renderKMB(listEl, validKmbStopId_PokYin, '博研路');
         } catch (e) { listEl.innerHTML = '<div class="status-msg error">更新失敗</div>'; }
     }
 
@@ -460,11 +452,12 @@
                 const firstStop = routeData.data.find(s => s.seq === '1');
                 if (firstStop) validKmbStopId_Uni = firstStop.stop;
             }
-            renderKMB(listEl, validKmbStopId_Uni, '往白石角');
+            // 修改：強制顯示 "大學站"
+            renderKMB(listEl, validKmbStopId_Uni, '大學站');
         } catch (e) { listEl.innerHTML = '<div class="status-msg error">更新失敗</div>'; }
     }
 
-    async function renderKMB(element, stopId, defaultDest) {
+    async function renderKMB(element, stopId, displayLabel) {
         if (!stopId) { element.innerHTML = '<div class="status-msg">找不到車站</div>'; return; }
         const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/eta/${stopId}/272A/1`);
         const data = await res.json();
@@ -476,9 +469,10 @@
             element.innerHTML = etas.slice(0, 3).map(bus => {
                 const mins = getMins(bus.eta);
                 const isUrgent = mins === '即將' || mins === '0分' || mins === '1分' || mins === '2分';
+                // 修改：直接使用 displayLabel (例如 "博研路" 或 "大學站")
                 return `
                 <div class="schedule-item">
-                    <span class="dest-name">${bus.dest_tc || defaultDest}</span>
+                    <span class="dest-name">${displayLabel}</span>
                     <div class="time-info">
                         <span class="eta-time">${formatTime(bus.eta)}</span>
                         <span class="eta-minutes ${isUrgent ? 'urgent' : ''}">${mins}</span>
