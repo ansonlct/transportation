@@ -2,883 +2,494 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#f0f2f5">
-    <title>Travel Flow Ultimate (iOS 26 Concept)</title>
-    <!-- SortableJS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>交通出行</title>
     <style>
         :root {
-            /* iOS 26 Glass Palette */
-            --primary: #0A84FF;
-            --primary-glow: rgba(10, 132, 255, 0.4);
-            --danger: #FF453A;
-            --success: #32D74B;
-            
-            /* Glass Variables */
-            --glass-bg: rgba(255, 255, 255, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.4);
-            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10);
-            --glass-blur: blur(25px) saturate(180%);
-            
-            --text-main: #000000;
-            --text-sub: rgba(60, 60, 67, 0.6);
-            --radius: 20px;
-            --safe-top: max(20px, env(safe-area-inset-top));
-            --safe-bottom: max(20px, env(safe-area-inset-bottom));
+            --bg-color: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-main: #1C1C1E;
+            --text-sub: #8E8E93;
+            --kmb-red: #E3001B;
+            --mtr-blue: #0072BC;
+            --accent: #007AFF;
+            --tab-bar-height: 60px;
         }
 
-        /* --- 基礎佈局 & 背景 --- */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
-        
         body {
-            margin: 0; padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 16px;
+            padding-bottom: calc(var(--tab-bar-height) + 20px);
             color: var(--text-main);
-            height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 500px; margin: 0 auto; }
+
+        header { margin-bottom: 15px; text-align: center; }
+        h1 { font-size: 1.2rem; margin: 0; font-weight: 600; }
+        .update-time { font-size: 0.8rem; color: var(--text-sub); margin-top: 4px; }
+
+        /* --- 卡片樣式 --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             overflow: hidden;
-            display: flex; flex-direction: column;
-            /* Mesh Gradient Background */
-            background: 
-                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-            background: linear-gradient(135deg, #f6f7ff 0%, #eef1f5 100%);
-        }
-        
-        /* 增加動態背景球 (裝飾用) */
-        body::before {
-            content: ''; position: absolute; top: -10%; left: -10%; width: 60%; height: 40%;
-            background: linear-gradient(70deg, #8EC5FC 0%, #E0C3FC 100%);
-            filter: blur(80px); opacity: 0.6; z-index: -1;
-            animation: floatBall 10s infinite alternate;
-        }
-        body::after {
-            content: ''; position: absolute; bottom: -10%; right: -10%; width: 60%; height: 40%;
-            background: linear-gradient(70deg, #85FFBD 0%, #FFFB7D 100%);
-            filter: blur(80px); opacity: 0.4; z-index: -1;
-            animation: floatBall 15s infinite alternate-reverse;
+            border: 1px solid rgba(0,0,0,0.05);
         }
 
-        @keyframes floatBall { from { transform: translate(0,0); } to { transform: translate(20px, 40px); } }
-        
-        /* --- 通用動畫 --- */
-        @keyframes pop { 
-            0% { transform: scale(1); } 
-            50% { transform: scale(1.15); box-shadow: 0 0 25px var(--primary-glow); } 
-            100% { transform: scale(1); } 
-        }
-        @keyframes suckIn {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(0.1) translateY(-200px); opacity: 0; }
-        }
-
-        /* --- 視圖管理 --- */
-        .view {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column;
-            opacity: 0; pointer-events: none;
-            transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-            z-index: 1;
-        }
-        .view.active { opacity: 1; pointer-events: auto; z-index: 10; }
-
-        /* --- Glassmorphism Components --- */
-        .glass-panel {
-            background: var(--glass-bg);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border: 1px solid var(--glass-border);
-            box-shadow: var(--glass-shadow);
-        }
-
-        /* --- Header --- */
-        header {
-            padding: calc(var(--safe-top) + 12px) 24px 12px 24px;
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border-bottom: 1px solid rgba(255,255,255,0.5);
-            display: flex; justify-content: space-between; align-items: center;
-            z-index: 50;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-        }
-        h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-main); }
-        .header-btn { 
-            font-size: 16px; color: var(--primary); background: none; border: none; 
-            font-weight: 600; cursor: pointer; padding: 8px; 
-            border-radius: 12px; transition: 0.2s;
-        }
-        .header-btn:active { background: rgba(0,0,0,0.05); transform: scale(0.95); }
-        
-        /* --- Content --- */
-        .content { flex: 1; overflow-y: auto; padding: 24px; padding-bottom: calc(var(--safe-bottom) + 100px); }
-        
-        .card { 
-            background: rgba(255,255,255,0.75); 
-            border-radius: var(--radius); padding: 24px; margin-bottom: 24px; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.05);
-            border: 1px solid rgba(255,255,255,0.6);
-            backdrop-filter: blur(10px);
-        }
-        
-        /* --- Forms --- */
-        .form-group { margin-bottom: 24px; }
-        .form-label { display: block; font-size: 13px; color: var(--text-sub); margin-bottom: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
-        .form-input {
-            width: 100%; padding: 16px; font-size: 17px;
-            border: 1px solid rgba(0,0,0,0.05); 
-            background: rgba(255,255,255,0.5); 
-            border-radius: 14px;
-            font-family: inherit; -webkit-appearance: none;
-            transition: 0.3s;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-        }
-        .form-input:focus { 
-            background: #fff; outline: none; 
-            box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.15); 
-            border-color: var(--primary);
-        }
-
-        .btn-main {
-            width: 100%; padding: 18px; 
-            background: linear-gradient(135deg, #007AFF 0%, #0055FF 100%);
-            color: white; border: none; border-radius: 16px; 
-            font-size: 17px; font-weight: 600;
-            box-shadow: 0 8px 20px rgba(0,122,255,0.3); 
-            margin-top: 10px; cursor: pointer;
-            position: relative; overflow: hidden;
-        }
-        .btn-main::after {
-            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, rgba(255,255,255,0.2), transparent);
-        }
-        .btn-main:active { transform: scale(0.97); box-shadow: 0 4px 10px rgba(0,122,255,0.2); }
-
-        /* --- Days Bar (Frosted Glass) --- */
-        .days-bar-wrapper { 
-            background: rgba(255,255,255,0.4); 
-            backdrop-filter: blur(15px);
-            padding: 14px 0; z-index: 40; 
-            border-bottom: 1px solid rgba(255,255,255,0.3); 
-        }
-        .days-scroll {
-            display: flex; overflow-x: auto; padding: 0 20px; gap: 12px;
-            scrollbar-width: none; -webkit-overflow-scrolling: touch;
-        }
-        .days-scroll::-webkit-scrollbar { display: none; }
-        
-        .day-chip {
-            flex-shrink: 0; padding: 10px 20px;
-            background: rgba(255,255,255,0.7); 
-            color: var(--text-sub);
-            border-radius: 24px; font-size: 15px; font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            border: 1px solid rgba(255,255,255,0.8);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-            cursor: pointer; position: relative;
-        }
-        .day-chip.active { 
-            background: var(--primary); color: white; 
-            box-shadow: 0 8px 20px var(--primary-glow); 
-            border-color: transparent;
-            transform: scale(1.05); 
-        }
-        
-        /* 拖曳目標吸入態 */
-        .day-chip.drag-target { 
-            background: white; color: var(--primary); 
-            transform: scale(1.2); 
-            border: 2px solid var(--primary);
-            box-shadow: 0 0 20px var(--primary-glow);
-            z-index: 100;
-        }
-        .day-chip.pop-effect { animation: pop 0.4s ease; }
-        
-        .add-day-btn { width: 48px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.03); padding: 0; }
-
-        /* --- Items List --- */
-        .item {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.6);
-            border-radius: 18px; padding: 18px; margin-bottom: 14px;
-            display: flex; align-items: flex-start;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            position: relative; touch-action: pan-y;
-        }
-        
-        .item.completed { background: rgba(255,255,255,0.4); box-shadow: none; border-color: transparent; }
-        .item.completed .item-title, .item.completed .item-meta { opacity: 0.5; }
-        .item.completed .icon-btn.check { color: var(--success); text-shadow: 0 0 15px rgba(52, 199, 89, 0.6); transform: scale(1.1); }
-        
-        .item.cancelled { background: #EFEFF4; opacity: 0.8; }
-        .item.cancelled .item-title { text-decoration: line-through; color: var(--text-sub); }
-        
-        /* Sortable Drag States */
-        .item.sortable-ghost { opacity: 0.2; transform: scale(0.95); background: var(--primary); }
-        .item.sortable-drag { 
-            opacity: 1; transform: scale(1.05) rotate(3deg); 
-            background: rgba(255,255,255,0.95);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.2); 
-            z-index: 1000; cursor: grabbing;
-            border: 1px solid var(--primary);
-        }
-        /* 吸入動畫 class */
-        .item.sucked-away { animation: suckIn 0.4s forwards; }
-
-        .time-col { width: 65px; font-weight: 700; font-size: 15px; color: var(--primary); margin-top: 2px; letter-spacing: -0.5px; }
-        .info-col { flex: 1; padding-right: 10px; }
-        .item-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; line-height: 1.3; color: var(--text-main); }
-        .item-meta { font-size: 13px; color: var(--text-sub); display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
-        
-        .countdown-tag {
-            background: rgba(10, 132, 255, 0.1); color: var(--primary);
-            padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;
-            display: inline-flex; align-items: center; gap: 4px;
-        }
-
-        .action-col { display: flex; gap: 8px; align-items: center; height: 100%; padding-left: 5px; }
-        .icon-btn { 
-            font-size: 20px; color: #D1D1D6; padding: 10px; border-radius: 50%; 
-            background: rgba(0,0,0,0.02); transition: 0.2s; cursor: pointer; 
-        }
-        .icon-btn:active { transform: scale(0.8); background: rgba(0,0,0,0.05); }
-
-        /* --- FAB & Modals --- */
-        .fab {
-            position: fixed; bottom: 34px; right: 24px;
-            width: 64px; height: 64px; 
-            background: linear-gradient(135deg, var(--primary), #0055FF);
+        .card-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
             color: white;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 28px; box-shadow: 0 10px 30px rgba(0,122,255,0.4);
-            z-index: 200; cursor: pointer; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
         }
-        .fab:active { transform: scale(0.85) rotate(90deg); }
 
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.3); z-index: 1000;
-            opacity: 0; pointer-events: none; transition: opacity 0.3s;
-            display: flex; align-items: flex-end; justify-content: center;
-            backdrop-filter: blur(4px);
+        .card-content {
+            padding: 4px 16px 16px 16px;
+            background: white;
+            min-height: 80px;
+            transition: opacity 0.3s ease-in-out;
         }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
         
-        .sheet {
-            background: rgba(255,255,255,0.9);
-            width: 100%; max-width: 600px;
-            border-radius: 28px 28px 0 0; 
-            padding: 24px; padding-bottom: max(34px, env(safe-area-inset-bottom));
-            transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-            backdrop-filter: blur(30px) saturate(180%);
-            border-top: 1px solid rgba(255,255,255,0.5);
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
-        }
-        .modal-overlay.active .sheet { transform: translateY(0); }
+        .fading { opacity: 0.2; }
 
-        /* --- Dialog --- */
-        .dialog-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.2); z-index: 3000;
-            display: none; align-items: center; justify-content: center;
-            backdrop-filter: blur(8px);
-            animation: fadeIn 0.2s;
+        .icon { font-size: 1.4rem; margin-right: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card-title { font-size: 1.1rem; font-weight: 700; flex-grow: 1; }
+        
+        /* 列表項目 */
+        .schedule-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px dashed #E5E5EA;
         }
-        .dialog-box {
-            background: rgba(255,255,255,0.85); width: 80%; max-width: 320px;
-            border-radius: 20px; overflow: hidden; text-align: center;
-            backdrop-filter: blur(30px) saturate(180%);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-            border: 1px solid rgba(255,255,255,0.5);
-            animation: pop 0.3s;
-        }
-        .dialog-content { padding: 24px 20px; }
-        .dialog-title { font-weight: 700; font-size: 18px; margin-bottom: 8px; }
-        .dialog-msg { font-size: 14px; color: var(--text-sub); line-height: 1.5; }
-        .dialog-actions { display: flex; border-top: 0.5px solid rgba(60,60,67,0.2); }
-        .dialog-btn {
-            flex: 1; padding: 16px; background: transparent; border: none;
-            font-size: 17px; font-weight: 400; color: var(--primary);
-            border-right: 0.5px solid rgba(60,60,67,0.2); cursor: pointer;
-        }
-        .dialog-btn:last-child { border-right: none; font-weight: 600; }
-        .dialog-btn.destructive { color: var(--danger); font-weight: 600; }
-        .dialog-btn:active { background: rgba(0,0,0,0.05); }
+        .schedule-item:last-child { border-bottom: none; }
 
-        /* --- Toast --- */
-        .toast {
-            position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.9); color: var(--text-main);
-            padding: 12px 24px; border-radius: 50px;
-            font-size: 15px; font-weight: 600;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            z-index: 2000; pointer-events: none;
-            display: flex; align-items: center; gap: 10px;
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.5);
-            animation: slideDownFade 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        .dest-name { font-size: 1.1rem; font-weight: 600; color: #333; }
+        .time-info { text-align: right; }
+        .eta-time { font-size: 1.2rem; font-weight: 700; display: block; color: #1C1C1E; }
+
+        .eta-minutes {
+            font-size: 0.85rem;
+            color: #34C759;
+            font-weight: 600;
+            background: #E8F5E9;
+            padding: 2px 8px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-top: 4px;
         }
-        @keyframes slideDownFade {
-            from { opacity: 0; transform: translate(-50%, -20px); }
-            to { opacity: 1; transform: translate(-50%, 0); }
+        .urgent { color: #FF3B30 !important; background: #FFEBEE !important; }
+
+        .status-msg { text-align: center; padding: 20px; color: var(--text-sub); font-size: 0.9rem; }
+        .error { color: #FF3B30; }
+
+        /* --- 顏色主題 --- */
+        .kmb-header { background: linear-gradient(135deg, #E3001B, #C20017); }
+        .mtr-header { background: linear-gradient(135deg, #0072BC, #005691); }
+        
+        /* 藥丸標籤 (Pill Badges) */
+        .stop-detail { font-size: 0.75rem; color: var(--kmb-red); background: white; padding: 4px 10px; border-radius: 12px; font-weight: 700; }
+        
+        /* 港鐵方向標籤 (右側) */
+        .stop-detail-mtr { 
+            font-size: 0.75rem; 
+            color: var(--mtr-blue); 
+            background: white; 
+            padding: 4px 10px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-left: auto; /* 自動靠右 */
         }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .plat-badge { font-size: 0.75rem; background: var(--mtr-blue); color: white; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+
+        /* --- 美化版下拉選單 --- */
+        .station-select {
+            appearance: none;
+            -webkit-appearance: none;
+            /* 毛玻璃半透明效果 */
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: 6px 32px 6px 12px; /* 右側留位給箭頭 */
+            border-radius: 12px; /* 更圓潤 */
+            cursor: pointer;
+            outline: none;
+            font-family: inherit;
+            /* 自訂箭頭 (更精緻的 SVG) */
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 6px center;
+            background-size: 20px;
+            margin: 0 4px; /* 與前後文字的間距 */
+            transition: all 0.2s;
+        }
+        
+        .station-select:active, .station-select:focus {
+            background-color: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        .station-select option {
+            background-color: white;
+            color: #333;
+            font-weight: normal;
+        }
+        
+        .header-text {
+            font-size: 1.1rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        /* 方向切換 (Tab 1) */
+        .direction-switch { display: flex; background: rgba(0, 0, 0, 0.2); padding: 3px; border-radius: 8px; gap: 2px; }
+        .dir-opt { font-size: 0.75rem; color: rgba(255, 255, 255, 0.7); padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; user-select: none; font-weight: 500; }
+        .dir-opt.active { background: white; color: var(--mtr-blue); font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+        /* 分頁 */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--tab-bar-height); background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid #E5E5EA; display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
+        .tab-item { flex: 1; text-align: center; padding: 8px 0; color: #C7C7CC; cursor: pointer; font-size: 0.7rem; transition: color 0.2s; }
+        .tab-item.active { color: var(--accent); transform: scale(1.05); }
+        .tab-icon { display: block; font-size: 1.5rem; margin-bottom: 2px; }
+
+        button.refresh-btn { background-color: white; color: var(--accent); border: 1px solid var(--accent); width: 100%; padding: 12px; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 10px; }
+        button.refresh-btn:active { background-color: #F0F0F5; }
     </style>
 </head>
 <body>
 
-    <!-- 頁面 1: 設定 -->
-    <div id="view-setup" class="view active">
-        <header><h1>建立新旅程</h1></header>
-        <div class="content">
-            <div class="card">
-                <div class="form-group">
-                    <label class="form-label"><i class="fas fa-map-marker-alt"></i> 目的地</label>
-                    <input type="text" id="setup-dest" class="form-input" placeholder="例如：東京, 台北..." value="Memorable Journey">
-                </div>
-                <div class="form-group">
-                    <label class="form-label"><i class="fas fa-calendar-alt"></i> 出發日期</label>
-                    <input type="date" id="setup-start" class="form-input" onchange="app.calcEnd()">
-                </div>
-                <div class="form-group">
-                    <label class="form-label"><i class="fas fa-clock"></i> 天數</label>
-                    <input type="number" id="setup-days" class="form-input" min="1" value="3" oninput="app.calcEnd()">
-                </div>
-                 <div class="form-group">
-                    <label class="form-label">回程日期 (自動計算)</label>
-                    <input type="date" id="setup-end" class="form-input" disabled style="background:transparent; padding-left:0; color:var(--primary); font-weight:600;">
-                </div>
-                <button class="btn-main" onclick="app.startTrip()">開始規劃</button>
+<div class="container">
+    <header>
+        <h1 id="page-title">白石角出發</h1>
+        <div class="update-time" id="last-updated">等待更新...</div>
+    </header>
+
+    <!-- ================= 分頁 1: 白石角出發 ================= -->
+    <div id="tab-1" class="tab-content active">
+        <!-- KMB Card -->
+        <div class="card">
+            <div class="card-header kmb-header">
+                <span class="icon">🚌</span>
+                <span class="card-title">九巴 272A</span>
+                <span id="kmb-stop-badge-1" class="stop-detail">博研路</span>
             </div>
-            <p style="text-align:center; color: var(--primary); font-size:15px; font-weight:500; margin-top:30px; display:none; cursor:pointer;" id="resume-btn" onclick="app.loadData()">
-                <i class="fas fa-undo"></i> 恢復上次的編輯
-            </p>
-        </div>
-    </div>
-
-    <!-- 頁面 2: 行程規劃 -->
-    <div id="view-planner" class="view">
-        <header>
-            <button class="header-btn" onclick="app.openSettings()"><i class="fas fa-cog"></i></button>
-            <div style="text-align:center;">
-                <h1 id="planner-title" style="font-size:18px;">Trip</h1>
-                <div id="planner-dates" style="font-size:11px; color:var(--text-sub); font-weight:600; margin-top:2px;">...</div>
-            </div>
-            <button class="header-btn" onclick="app.confirmReset()" style="color:var(--danger)"><i class="fas fa-trash-alt"></i></button>
-        </header>
-
-        <!-- 日子捲動列 -->
-        <div class="days-bar-wrapper">
-            <div class="days-scroll" id="days-container"></div>
-        </div>
-
-        <div class="content" id="planner-content">
-            <div id="list-wrapper" style="min-height: 400px; padding-bottom: 50px;"></div>
-            
-            <div style="text-align:center; color:var(--text-sub); opacity:0.6; font-size:13px; margin-top:20px; font-weight:500;">
-                <p><i class="fas fa-hand-pointer"></i> 長按行程可拖曳</p>
-                <p>拖曳至上方「Day X」感受吸入特效</p>
+            <div id="kmb-list-1" class="card-content">
+                <div class="status-msg">搜尋中...</div>
             </div>
         </div>
 
-        <div class="fab" onclick="app.openItemModal()"><i class="fas fa-plus"></i></div>
-    </div>
-
-    <!-- 編輯行程 Modal -->
-    <div id="modal-item" class="modal-overlay" onclick="if(event.target === this) app.closeModals()">
-        <div class="sheet">
-            <div style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center;">
-                <button class="header-btn" style="color:var(--danger); font-size:15px; opacity:0" id="btn-del-item" onclick="app.deleteItem()">刪除</button>
-                <span style="font-weight:700; font-size:17px;">行程詳情</span>
-                <button class="header-btn" onclick="app.saveItem()" style="font-weight:700; font-size:17px;">儲存</button>
-            </div>
-            <input type="hidden" id="inp-id">
-            <div class="form-group"><input type="text" id="inp-name" class="form-input" placeholder="行程名稱 (例如: 晚餐)" style="font-size:22px; font-weight:700; background:transparent; padding-left:0; border:none; box-shadow:none;"></div>
-            <hr style="border:none; border-top:1px solid rgba(0,0,0,0.1); margin-bottom:20px;">
-            <div style="display:flex; gap:16px;">
-                <div class="form-group" style="flex:1">
-                    <label class="form-label">時間</label>
-                    <input type="time" id="inp-time" class="form-input">
-                </div>
-                <div class="form-group" style="flex:1.5">
-                    <label class="form-label">地點</label>
-                    <input type="text" id="inp-loc" class="form-input" placeholder="搜尋或輸入地點">
+        <!-- MTR Card -->
+        <div class="card">
+            <div class="card-header mtr-header">
+                <span class="icon">🚇</span>
+                <span class="card-title">港鐵 大學站</span>
+                <div class="direction-switch">
+                    <span id="btn-down" class="dir-opt active" onclick="switchMtrDir('DOWN')">往金鐘</span>
+                    <span id="btn-up" class="dir-opt" onclick="switchMtrDir('UP')">往羅湖/落馬洲</span>
                 </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">備註</label>
-                <textarea id="inp-note" class="form-input" rows="3" placeholder="備註事項..." style="resize:none;"></textarea>
+            <div id="mtr-list-1" class="card-content">
+                <div class="status-msg">載入中...</div>
             </div>
         </div>
     </div>
 
-    <!-- 設定 Modal -->
-    <div id="modal-settings" class="modal-overlay" onclick="if(event.target === this) app.closeModals()">
-        <div class="sheet">
-            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-                <button class="header-btn" onclick="app.closeModals()" style="color:var(--text-sub)">取消</button>
-                <span style="font-weight:700; font-size:17px;">旅程設定</span>
-                <button class="header-btn" onclick="app.saveSettings()" style="font-weight:700">更新</button>
-            </div>
-            <div class="form-group">
-                <label class="form-label">目的地名稱</label>
-                <input type="text" id="set-dest" class="form-input">
-            </div>
-            <div class="form-group">
-                <label class="form-label">出發日期</label>
-                <input type="date" id="set-start" class="form-input">
-            </div>
-            <p style="font-size:12px; color:var(--text-sub); text-align:center;">
-                <i class="fas fa-shield-alt"></i> 防呆系統運作中：更改日期將自動校正所有行程時間
-            </p>
-        </div>
-    </div>
-
-    <!-- 自訂 Dialog -->
-    <div id="dialog" class="dialog-overlay">
-        <div class="dialog-box">
-            <div class="dialog-content">
-                <div class="dialog-title" id="diag-title">Title</div>
-                <div class="dialog-msg" id="diag-msg">Message</div>
-            </div>
-            <div class="dialog-actions">
-                <button class="dialog-btn" id="diag-cancel" onclick="app.hideDialog()">取消</button>
-                <button class="dialog-btn" id="diag-ok">確定</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const app = {
-            state: { dest: '', start: '', days: 1, items: [], currentDay: 0 },
-            
-            init() {
-                try {
-                    // Safe Start Check
-                    const setupStart = document.getElementById('setup-start');
-                    if(setupStart) {
-                        setupStart.valueAsDate = new Date();
-                        this.calcEnd();
-                    }
-                    
-                    if(localStorage.getItem('travel_ultimate')) {
-                        const btn = document.getElementById('resume-btn');
-                        if(btn) btn.style.display = 'block';
-                    }
-                    
-                    // Live Countdown
-                    setInterval(() => {
-                        if(document.getElementById('view-planner').classList.contains('active')) {
-                            this.renderList(false);
-                        }
-                    }, 60000);
-                } catch(e) {
-                    console.error("Init Error", e);
-                }
-            },
-
-            // --- 功能 2: 防呆與壞檔防禦機制 ---
-            loadData() {
-                try {
-                    const raw = localStorage.getItem('travel_ultimate');
-                    if(raw) {
-                        const data = JSON.parse(raw);
-                        
-                        // 資料結構驗證 (Schema Validation)
-                        if (!data || typeof data !== 'object' || !Array.isArray(data.items)) {
-                            throw new Error("Data corruption detected");
-                        }
-                        
-                        // 確保必要欄位存在 (Auto-patch)
-                        this.state = {
-                            dest: data.dest || "Recovered Trip",
-                            start: data.start || new Date().toISOString().split('T')[0],
-                            days: data.days || 1,
-                            items: data.items || [],
-                            currentDay: data.currentDay || 0
-                        };
-                        
-                        this.enterPlanner();
-                        this.toast('歡迎回來', 'success');
-                    }
-                } catch (e) {
-                    console.error("Load Failed:", e);
-                    this.showDialog('資料異常', '偵測到存檔損毀，系統已自動修復並重置至安全狀態。', () => {
-                        localStorage.removeItem('travel_ultimate');
-                        location.reload();
-                    }, true);
-                }
-            },
-
-            calcEnd() {
-                const s = document.getElementById('setup-start').value;
-                const d = parseInt(document.getElementById('setup-days').value) || 1;
-                if(s) {
-                    const date = new Date(s);
-                    date.setDate(date.getDate() + (d - 1));
-                    document.getElementById('setup-end').value = date.toISOString().split('T')[0];
-                }
-            },
-
-            startTrip() {
-                this.state.dest = document.getElementById('setup-dest').value || "My Trip";
-                this.state.start = document.getElementById('setup-start').value;
-                this.state.days = parseInt(document.getElementById('setup-days').value) || 1;
-                this.state.items = [];
-                this.enterPlanner();
-                this.save();
-            },
-
-            enterPlanner() {
-                document.getElementById('view-setup').classList.remove('active');
-                document.getElementById('view-planner').classList.add('active');
-                this.renderHeader();
-                this.renderTabs();
-                this.renderList();
-            },
-
-            save() {
-                try {
-                    localStorage.setItem('travel_ultimate', JSON.stringify(this.state));
-                } catch(e) {
-                    this.toast("儲存失敗：空間不足", "error");
-                }
-            },
-
-            // --- 渲染 ---
-            renderHeader() {
-                document.getElementById('planner-title').innerText = this.state.dest;
-                const d = new Date(this.state.start);
-                const d2 = new Date(this.state.start);
-                d2.setDate(d2.getDate() + this.state.days - 1);
-                document.getElementById('planner-dates').innerText = `${this.formatDate(d)} - ${this.formatDate(d2)}`;
-            },
-
-            formatDate(date) {
-                return `${date.getMonth()+1}/${date.getDate()}`;
-            },
-
-            renderTabs() {
-                const con = document.getElementById('days-container');
-                con.innerHTML = '';
-                for(let i=0; i<this.state.days; i++) {
-                    const d = new Date(this.state.start);
-                    d.setDate(d.getDate() + i);
-                    
-                    const el = document.createElement('div');
-                    el.className = `day-chip ${i === this.state.currentDay ? 'active' : ''}`;
-                    el.innerHTML = `Day ${i+1} <span style="font-size:12px; opacity:0.7">(${d.getMonth()+1}/${d.getDate()})</span>`;
-                    el.dataset.idx = i;
-                    el.onclick = () => this.switchDay(i);
-                    con.appendChild(el);
-                }
+    <!-- ================= 分頁 2: 回程/往北 ================= -->
+    <div id="tab-2" class="tab-content">
+        <!-- MTR Return Selection -->
+        <div class="card">
+            <div class="card-header mtr-header">
+                <span class="icon">🚇</span>
                 
-                const addBtn = document.createElement('div');
-                addBtn.className = 'day-chip add-day-btn';
-                addBtn.innerHTML = '<i class="fas fa-plus"></i>';
-                addBtn.onclick = () => {
-                    this.state.days++;
-                    this.save();
-                    this.renderTabs();
-                    this.renderHeader();
-                    this.switchDay(this.state.days - 1);
-                    this.toast('已新增 Day ' + this.state.days);
-                    setTimeout(()=>con.scrollLeft = con.scrollWidth, 100);
-                };
-                con.appendChild(addBtn);
-            },
-
-            renderList(reinitSortable = true) {
-                const list = document.getElementById('list-wrapper');
-                // 注意：若非完全重繪，這裡可優化 DOM diff，但為了保證狀態同步，這裡選擇全刷
-                list.innerHTML = '';
+                <!-- 新增：靜態文字 -->
+                <span class="header-text">港鐵</span>
                 
-                const items = this.state.items.filter(it => it.day === this.state.currentDay);
+                <!-- 車站選擇器 (美化版) -->
+                <select id="station-select" class="station-select" onchange="switchReturnStation(this.value)">
+                    <optgroup label="市區/南面 (往羅湖/落馬洲)">
+                        <option value="ADM" selected>金鐘</option>
+                        <option value="EXC">會展</option>
+                        <option value="HOM">紅磡</option>
+                        <option value="MKK">旺角東</option>
+                        <option value="KOT">九龍塘</option>
+                        <option value="TAW">大圍</option>
+                        <option value="SHT">沙田</option>
+                        <option value="FOT">火炭</option>
+                        <option value="RAC">馬場</option>
+                    </optgroup>
+                    <optgroup label="北區/北面 (往金鐘)">
+                        <option value="TAP">大埔墟</option>
+                        <option value="TWO">太和</option>
+                        <option value="FAN">粉嶺</option>
+                        <option value="SHS">上水</option>
+                        <option value="LOW">羅湖</option>
+                        <option value="LMC">落馬洲</option>
+                    </optgroup>
+                </select>
+                
+                <!-- 新增：靜態文字 -->
+                <span class="header-text">站</span>
 
-                if(items.length === 0) {
-                    list.innerHTML = `
-                        <div style="text-align:center; padding:60px 20px; color:var(--text-sub);">
-                            <i class="fas fa-wind" style="font-size:40px; opacity:0.3; margin-bottom:10px;"></i>
-                            <div style="opacity:0.6">空空如也<br>點擊右下角按鈕新增行程</div>
-                        </div>`;
-                }
+                <!-- 右側方向標籤 (White Pill) -->
+                <span id="dest-label" class="stop-detail-mtr">往羅湖/落馬洲</span>
+            </div>
+            <div id="mtr-list-2" class="card-content">
+                <div class="status-msg">載入中...</div>
+            </div>
+        </div>
 
-                items.forEach(item => {
-                    const el = document.createElement('div');
-                    el.className = `item ${item.done ? 'completed' : ''} ${item.cancel ? 'cancelled' : ''}`;
-                    el.dataset.id = item.id;
-                    
-                    // 倒數邏輯
-                    let countdownHtml = '';
-                    if(!item.done && !item.cancel && item.time) {
-                        const d = new Date(this.state.start);
-                        d.setDate(d.getDate() + this.state.currentDay);
-                        const target = new Date(`${d.toISOString().split('T')[0]}T${item.time}`);
-                        const now = new Date();
-                        const diff = target - now;
-                        
-                        if(diff > 0 && diff < 86400000) {
-                            const h = Math.floor(diff/3600000);
-                            const m = Math.floor((diff%3600000)/60000);
-                            countdownHtml = `<span class="countdown-tag"><i class="fas fa-stopwatch"></i> ${h>0? h+'h ':''}${m}m</span>`;
-                        }
-                    }
+        <!-- KMB Uni Station -->
+        <div class="card">
+            <div class="card-header kmb-header">
+                <span class="icon">🚌</span>
+                <span class="card-title">九巴 272A</span>
+                <span class="stop-detail">大學站總站</span>
+            </div>
+            <div id="kmb-list-2" class="card-content">
+                <div class="status-msg">搜尋中...</div>
+            </div>
+        </div>
+    </div>
 
-                    let meta = [];
-                    if(item.loc) meta.push(`<span><i class="fas fa-map-pin" style="color:var(--primary)"></i> ${item.loc}</span>`);
-                    if(item.note) meta.push(`<span><i class="fas fa-align-left"></i> 備註</span>`);
-                    
-                    el.innerHTML = `
-                        <div class="time-col">${item.time || '<i class="fas fa-minus" style="opacity:0.3"></i>'}</div>
-                        <div class="info-col" onclick="app.openItemModal('${item.id}')">
-                            <div class="item-title">${item.name}</div>
-                            <div class="item-meta">
-                                ${meta.join('')}
-                                ${countdownHtml}
-                            </div>
-                        </div>
-                        <div class="action-col">
-                            <i class="fas fa-check icon-btn check" onclick="app.toggleStatus('${item.id}', 'done')"></i>
-                            <i class="fas fa-ban icon-btn ban" onclick="app.toggleStatus('${item.id}', 'cancel')"></i>
-                        </div>
-                    `;
-                    list.appendChild(el);
+    <button class="refresh-btn" onclick="refreshAll()">🔄 立即更新</button>
+</div>
+
+<!-- 底部導航 -->
+<nav class="tab-bar">
+    <div class="tab-item active" onclick="switchTab(1)">
+        <span class="tab-icon">🏠</span>
+        白石角出發
+    </div>
+    <div class="tab-item" onclick="switchTab(2)">
+        <span class="tab-icon">🛤️</span>
+        我要回家
+    </div>
+</nav>
+
+<script>
+    // --- 工具 ---
+    const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('zh-HK', {hour:'2-digit', minute:'2-digit', hour12:false}) : '--:--';
+    const getMins = (iso) => {
+        const diff = Math.floor((new Date(iso) - new Date()) / 60000);
+        return diff <= 0 ? '即將' : `${diff}分`;
+    };
+
+    // --- 狀態 ---
+    let currentTab = 1;
+    let validKmbStopId_PokYin = null;
+    let validKmbStopId_Uni = null;
+    let mtrUniDirection = 'DOWN';
+    let selectedReturnStation = 'ADM'; // 分頁2 選擇的車站
+
+    // --- 車站方向配置 (智能判斷) ---
+    // UP = 北行 (往羅湖/落馬洲), DOWN = 南行 (往金鐘)
+    const mtrConfig = {
+        'ADM': { dir: 'UP', label: '往羅湖/落馬洲' }, 'EXC': { dir: 'UP', label: '往羅湖/落馬洲' },
+        'HOM': { dir: 'UP', label: '往羅湖/落馬洲' }, 'MKK': { dir: 'UP', label: '往羅湖/落馬洲' },
+        'KOT': { dir: 'UP', label: '往羅湖/落馬洲' }, 'TAW': { dir: 'UP', label: '往羅湖/落馬洲' },
+        'SHT': { dir: 'UP', label: '往羅湖/落馬洲' }, 'FOT': { dir: 'UP', label: '往羅湖/落馬洲' },
+        'RAC': { dir: 'UP', label: '往羅湖/落馬洲' }, 'TAP': { dir: 'DOWN', label: '往金鐘' },
+        'TWO': { dir: 'DOWN', label: '往金鐘' }, 'FAN': { dir: 'DOWN', label: '往金鐘' },
+        'SHS': { dir: 'DOWN', label: '往金鐘' }, 'LOW': { dir: 'DOWN', label: '往金鐘' },
+        'LMC': { dir: 'DOWN', label: '往金鐘' }
+    };
+
+    // --- 分頁切換 ---
+    function switchTab(tabId) {
+        currentTab = tabId;
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+        document.querySelectorAll('.tab-item').forEach((el, index) => {
+            el.classList.toggle('active', index + 1 === tabId);
+        });
+        document.getElementById('page-title').innerText = tabId === 1 ? '白石角出發' : '我要回家';
+        refreshAll();
+    }
+
+    // --- Tab 1: 港鐵切換過場 ---
+    function switchMtrDir(dir) {
+        if (mtrUniDirection === dir) return;
+        mtrUniDirection = dir;
+        document.getElementById('btn-down').classList.toggle('active', dir === 'DOWN');
+        document.getElementById('btn-up').classList.toggle('active', dir === 'UP');
+        smoothRefresh('mtr-list-1', fetchMTR_Uni);
+    }
+
+    // --- Tab 2: 港鐵車站切換過場 ---
+    function switchReturnStation(stationCode) {
+        if (selectedReturnStation === stationCode) return;
+        selectedReturnStation = stationCode;
+        
+        // 更新標籤文字
+        const config = mtrConfig[stationCode];
+        if (config) {
+            document.getElementById('dest-label').innerText = config.label;
+        }
+
+        smoothRefresh('mtr-list-2', fetchMTR_Return);
+    }
+
+    // --- 通用平滑刷新函數 ---
+    function smoothRefresh(elementId, fetchFunc) {
+        const el = document.getElementById(elementId);
+        el.classList.add('fading');
+        setTimeout(() => {
+            fetchFunc().then(() => {
+                el.classList.remove('fading');
+            });
+        }, 300);
+    }
+
+    // --- KMB 邏輯 ---
+    async function fetchKMB_PokYin() {
+        if(currentTab !== 1) return; 
+        const listEl = document.getElementById('kmb-list-1');
+        try {
+            if (!validKmbStopId_PokYin) {
+                const routeRes = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-stop/272A/outbound/1');
+                const routeData = await routeRes.json();
+                const promises = routeData.data.map(async (s) => {
+                    const detailRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/stop/${s.stop}`);
+                    const detail = await detailRes.json();
+                    return detail.data.name_tc.includes('博研路') ? s.stop : null;
                 });
-
-                if(reinitSortable) this.initSortable(list);
-            },
-
-            // --- 功能 3: 完整的跨日拖拉系統 (吸入特效 + 震動) ---
-            initSortable(el) {
-                if(this.sortable) this.sortable.destroy();
-                this.sortable = new Sortable(el, {
-                    animation: 250,
-                    delay: 150, delayOnTouchOnly: true,
-                    ghostClass: 'sortable-ghost',
-                    dragClass: 'sortable-drag',
-                    fallbackTolerance: 3, // 降低誤觸
-                    onMove: (evt) => {
-                        // 檢測手指位置
-                        const touch = evt.originalEvent.touches ? evt.originalEvent.touches[0] : evt.originalEvent;
-                        if(touch) {
-                            // 重置所有 HighLight
-                            document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('drag-target'));
-                            
-                            // 獲取當前手指下方的元素
-                            const target = document.elementFromPoint(touch.clientX, touch.clientY);
-                            if(target && target.closest('.day-chip') && !target.closest('.add-day-btn')) {
-                                const chip = target.closest('.day-chip');
-                                chip.classList.add('drag-target');
-                                
-                                // Haptic Feedback (震動回饋)
-                                if (navigator.vibrate && this.lastVibrateTarget !== chip) {
-                                    navigator.vibrate(15); // 微震動
-                                    this.lastVibrateTarget = chip;
-                                }
-                                return false; // 禁止在列表中排序，準備跨日
-                            } else {
-                                this.lastVibrateTarget = null;
-                            }
-                        }
-                    },
-                    onEnd: (evt) => {
-                        document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('drag-target'));
-                        this.lastVibrateTarget = null;
-                        
-                        const touch = evt.originalEvent.changedTouches ? evt.originalEvent.changedTouches[0] : evt.originalEvent;
-                        const target = document.elementFromPoint(touch.clientX, touch.clientY);
-                        const chip = target ? target.closest('.day-chip') : null;
-
-                        // 跨日移動判定
-                        if(chip && !chip.classList.contains('add-day-btn')) {
-                            const newDayIdx = parseInt(chip.dataset.idx);
-                            
-                            if(newDayIdx !== this.state.currentDay) {
-                                // 1. 視覺特效：吸入
-                                evt.item.classList.add('sucked-away');
-                                chip.classList.add('pop-effect');
-                                if(navigator.vibrate) navigator.vibrate([30, 50, 30]); // 成功震動
-
-                                // 2. 資料邏輯：移動
-                                setTimeout(() => {
-                                    const id = evt.item.dataset.id;
-                                    const item = this.state.items.find(i => i.id === id);
-                                    if(item) {
-                                        item.day = newDayIdx;
-                                        this.save();
-                                        this.toast(`已移動至 Day ${newDayIdx+1}`, 'success');
-                                        this.renderList(); // 重繪移除該項目
-                                        chip.classList.remove('pop-effect');
-                                    }
-                                }, 300); // 等待動畫
-                                return;
-                            }
-                        }
-                    }
-                });
-            },
-
-            switchDay(i) {
-                this.state.currentDay = i;
-                this.renderTabs();
-                this.renderList();
-            },
-
-            toggleStatus(id, type) {
-                const item = this.state.items.find(i => i.id === id);
-                if(item) {
-                    if(type === 'done') {
-                        item.done = !item.done;
-                        if(item.done) item.cancel = false;
-                    } else {
-                        item.cancel = !item.cancel;
-                        if(item.cancel) item.done = false;
-                    }
-                    this.save();
-                    this.renderList(false);
-                    if(navigator.vibrate) navigator.vibrate(10);
+                const stops = (await Promise.all(promises)).filter(s => s);
+                for (const sid of stops) {
+                    const etaRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/eta/${sid}/272A/1`);
+                    const etaData = await etaRes.json();
+                    if (etaData.data.some(e => e.eta)) { validKmbStopId_PokYin = sid; break; }
                 }
-            },
-
-            // --- Modal ---
-            openItemModal(id = null) {
-                const modal = document.getElementById('modal-item');
-                const delBtn = document.getElementById('btn-del-item');
-                
-                if(id) {
-                    const item = this.state.items.find(i => i.id === id);
-                    document.getElementById('inp-id').value = id;
-                    document.getElementById('inp-name').value = item.name;
-                    document.getElementById('inp-time').value = item.time;
-                    document.getElementById('inp-loc').value = item.loc;
-                    document.getElementById('inp-note').value = item.note;
-                    delBtn.style.opacity = 1; delBtn.style.pointerEvents = 'auto';
-                } else {
-                    document.getElementById('inp-id').value = '';
-                    document.getElementById('inp-name').value = '';
-                    document.getElementById('inp-time').value = '';
-                    document.getElementById('inp-loc').value = '';
-                    document.getElementById('inp-note').value = '';
-                    delBtn.style.opacity = 0; delBtn.style.pointerEvents = 'none';
-                }
-                modal.classList.add('active');
-            },
-
-            saveItem() {
-                const id = document.getElementById('inp-id').value;
-                const name = document.getElementById('inp-name').value;
-                if(!name) return this.toast('請輸入行程名稱');
-
-                if(id) {
-                    const item = this.state.items.find(i => i.id === id);
-                    item.name = name;
-                    item.time = document.getElementById('inp-time').value;
-                    item.loc = document.getElementById('inp-loc').value;
-                    item.note = document.getElementById('inp-note').value;
-                    this.toast('已更新');
-                } else {
-                    this.state.items.push({
-                        id: 'it'+Date.now(),
-                        day: this.state.currentDay,
-                        name: name,
-                        time: document.getElementById('inp-time').value,
-                        loc: document.getElementById('inp-loc').value,
-                        note: document.getElementById('inp-note').value,
-                        done: false, cancel: false
-                    });
-                    this.toast('已新增', 'success');
-                }
-                this.save();
-                this.closeModals();
-                this.renderList();
-            },
-
-            deleteItem() {
-                const id = document.getElementById('inp-id').value;
-                this.showDialog('刪除確認', '你確定要刪除這個行程嗎？', () => {
-                    this.state.items = this.state.items.filter(i => i.id !== id);
-                    this.save();
-                    this.closeModals();
-                    this.renderList();
-                    this.toast('已刪除');
-                }, true);
-            },
-
-            openSettings() {
-                document.getElementById('set-dest').value = this.state.dest;
-                document.getElementById('set-start').value = this.state.start;
-                document.getElementById('modal-settings').classList.add('active');
-            },
-
-            saveSettings() {
-                this.state.dest = document.getElementById('set-dest').value;
-                this.state.start = document.getElementById('set-start').value;
-                this.save();
-                this.renderHeader();
-                this.renderTabs();
-                this.renderList();
-                this.closeModals();
-                this.toast('設定已更新');
-            },
-
-            closeModals() {
-                document.querySelectorAll('.modal-overlay').forEach(el => el.classList.remove('active'));
-            },
-
-            // --- 系統工具 ---
-            toast(msg, type='normal') {
-                const existing = document.querySelector('.toast');
-                if(existing) existing.remove();
-
-                const div = document.createElement('div');
-                div.className = 'toast';
-                div.innerHTML = type === 'success' ? `<i class="fas fa-check-circle" style="color:var(--success)"></i> ${msg}` : msg;
-                document.body.appendChild(div);
-                setTimeout(() => { 
-                    div.style.opacity=0; 
-                    div.style.transform="translateX(-50%) translateY(-20px)";
-                    setTimeout(()=>div.remove(), 400); 
-                }, 2500);
-            },
-
-            showDialog(title, msg, onConfirm, destructive=false) {
-                const d = document.getElementById('dialog');
-                document.getElementById('diag-title').innerText = title;
-                document.getElementById('diag-msg').innerText = msg;
-                const okBtn = document.getElementById('diag-ok');
-                
-                okBtn.className = 'dialog-btn';
-                if(destructive) okBtn.classList.add('destructive');
-                okBtn.innerText = destructive ? '刪除' : '確定';
-                
-                const newBtn = okBtn.cloneNode(true);
-                okBtn.parentNode.replaceChild(newBtn, okBtn);
-                
-                newBtn.onclick = () => { onConfirm(); this.hideDialog(); };
-                d.style.display = 'flex';
-            },
-            
-            hideDialog() {
-                document.getElementById('dialog').style.display = 'none';
-            },
-
-            confirmReset() {
-                this.showDialog('重置旅程', '確定要清空所有資料嗎？此操作無法復原。', () => {
-                    localStorage.removeItem('travel_ultimate');
-                    location.reload();
-                }, true);
+                if (!validKmbStopId_PokYin && stops.length) validKmbStopId_PokYin = stops[0];
             }
-        };
+            renderKMB(listEl, validKmbStopId_PokYin, '往大學站');
+        } catch (e) { listEl.innerHTML = '<div class="status-msg error">更新失敗</div>'; }
+    }
 
-        window.onload = () => app.init();
-    </script>
+    async function fetchKMB_Uni() {
+        if(currentTab !== 2) return;
+        const listEl = document.getElementById('kmb-list-2');
+        try {
+            if (!validKmbStopId_Uni) {
+                const routeRes = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-stop/272A/outbound/1');
+                const routeData = await routeRes.json();
+                const firstStop = routeData.data.find(s => s.seq === '1');
+                if (firstStop) validKmbStopId_Uni = firstStop.stop;
+            }
+            renderKMB(listEl, validKmbStopId_Uni, '往白石角');
+        } catch (e) { listEl.innerHTML = '<div class="status-msg error">更新失敗</div>'; }
+    }
+
+    async function renderKMB(element, stopId, defaultDest) {
+        if (!stopId) { element.innerHTML = '<div class="status-msg">找不到車站</div>'; return; }
+        const res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/eta/${stopId}/272A/1`);
+        const data = await res.json();
+        const etas = data.data.filter(e => e.eta != null);
+
+        if (etas.length === 0) {
+            element.innerHTML = '<div class="status-msg">暫無班次</div>';
+        } else {
+            element.innerHTML = etas.slice(0, 3).map(bus => {
+                const mins = getMins(bus.eta);
+                const isUrgent = mins === '即將' || mins === '0分' || mins === '1分' || mins === '2分';
+                return `
+                <div class="schedule-item">
+                    <span class="dest-name">${bus.dest_tc || defaultDest}</span>
+                    <div class="time-info">
+                        <span class="eta-time">${formatTime(bus.eta)}</span>
+                        <span class="eta-minutes ${isUrgent ? 'urgent' : ''}">${mins}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    // --- MTR 邏輯 ---
+    // Tab 1: 大學站
+    async function fetchMTR_Uni() {
+        if(currentTab !== 1) return;
+        await renderMTR('UNI', document.getElementById('mtr-list-1'), mtrUniDirection);
+    }
+
+    // Tab 2: 回程 (智能方向)
+    async function fetchMTR_Return() {
+        if(currentTab !== 2) return;
+        const config = mtrConfig[selectedReturnStation];
+        const direction = config ? config.dir : 'UP'; 
+        await renderMTR(selectedReturnStation, document.getElementById('mtr-list-2'), direction);
+    }
+
+    async function renderMTR(station, element, direction) {
+        try {
+            const res = await fetch(`https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php?line=EAL&sta=${station}`);
+            const data = await res.json();
+            const schedule = data.data && data.data[`EAL-${station}`] ? data.data[`EAL-${station}`][direction] : null;
+
+            if (!schedule || schedule.length === 0) {
+                element.innerHTML = '<div class="status-msg">暫無班次</div>';
+                return;
+            }
+
+            const stationNames = {
+                'ADM': '金鐘', 'EXC': '會展', 'HOM': '紅磡', 'MKK': '旺角東', 'KOT': '九龍塘', 'TAW': '大圍',
+                'SHT': '沙田', 'FOT': '火炭', 'RAC': '馬場', 'UNI': '大學', 'TAP': '大埔墟', 'TWO': '太和',
+                'FAN': '粉嶺', 'SHS': '上水', 'LOW': '羅湖', 'LMC': '落馬洲'
+            };
+            
+            element.innerHTML = schedule.map(t => {
+                let dest = stationNames[t.dest] || t.dest;
+                const mins = getMins(t.time);
+                const isUrgent = mins === '即將' || mins === '0分' || mins === '1分' || mins === '2分';
+
+                return `
+                <div class="schedule-item">
+                    <div>
+                        <span class="dest-name">往 ${dest}</span>
+                        <span class="plat-badge">${t.plat}台</span>
+                    </div>
+                    <div class="time-info">
+                        <span class="eta-time">${formatTime(t.time)}</span>
+                        <span class="eta-minutes ${isUrgent ? 'urgent' : ''}">${mins}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch (e) {
+            console.error(e);
+            element.innerHTML = '<div class="status-msg error">資料無法載入</div>';
+        }
+    }
+
+    function refreshAll() {
+        document.getElementById('last-updated').innerText = '最後更新: ' + new Date().toLocaleTimeString();
+        if (currentTab === 1) {
+            fetchKMB_PokYin();
+            fetchMTR_Uni();
+        } else {
+            fetchMTR_Return();
+            fetchKMB_Uni();
+        }
+    }
+
+    // 啟動
+    refreshAll();
+    setInterval(refreshAll, 30000);
+
+</script>
 </body>
 </html>
