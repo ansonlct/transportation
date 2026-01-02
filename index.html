@@ -80,7 +80,21 @@
             text-align: center;
         }
         h1 { font-size: 1.2rem; margin: 0; font-weight: 600; }
-        .update-time { font-size: 0.8rem; color: var(--text-sub); margin-top: 4px; }
+        
+        /* 修改：更新時間文字樣式 */
+        .update-time { 
+            font-size: 0.8rem; 
+            color: var(--text-sub); 
+            margin-top: 4px; 
+            cursor: pointer; /* 提示可點擊 */
+            transition: color 0.1s, transform 0.1s;
+            display: inline-block; /* 讓 transform 生效 */
+            padding: 2px 8px; /* 增加點擊範圍 */
+        }
+        .update-time:active {
+            color: var(--accent); /* 點擊時變色 */
+            transform: scale(0.95); /* 點擊時微縮 */
+        }
 
         /* --- 內容區域 --- */
         .tab-content { 
@@ -251,7 +265,8 @@
 <div class="container">
     <header>
         <h1 id="page-title">白石角出行</h1>
-        <div class="update-time" id="last-updated">等待更新...</div>
+        <!-- 修改：加入 onclick 事件與 title 提示 -->
+        <div class="update-time" id="last-updated" onclick="refreshAll()" title="點擊立即更新">等待更新...</div>
     </header>
 
     <!-- ================= 分頁 1 ================= -->
@@ -260,7 +275,6 @@
             <div class="card-header kmb-header">
                 <span class="icon">🚌</span>
                 <span class="card-title">九巴 272A</span>
-                <!-- 修改：頁面1 九巴藥丸 -> 白石角(循環線) -->
                 <span id="kmb-stop-badge-1" class="stop-detail">白石角(循環線)</span>
             </div>
             <div id="kmb-list-1" class="card-content">
@@ -322,7 +336,6 @@
             <div class="card-header kmb-header">
                 <span class="icon">🚌</span>
                 <span class="card-title">九巴 272A</span>
-                <!-- 修改：頁面2 九巴藥丸 -> 白石角(循環線) -->
                 <span class="stop-detail">白石角(循環線)</span>
             </div>
             <div id="kmb-list-2" class="card-content">
@@ -437,7 +450,7 @@
                 }
                 if (!validKmbStopId_PokYin && stops.length) validKmbStopId_PokYin = stops[0];
             }
-            // 修改：強制顯示 "博研路"
+            // 這裡顯示 "博研路"
             renderKMB(listEl, validKmbStopId_PokYin, '博研路');
         } catch (e) { listEl.innerHTML = '<div class="status-msg error">更新失敗</div>'; }
     }
@@ -452,7 +465,7 @@
                 const firstStop = routeData.data.find(s => s.seq === '1');
                 if (firstStop) validKmbStopId_Uni = firstStop.stop;
             }
-            // 修改：強制顯示 "大學站"
+            // 這裡顯示 "大學站"
             renderKMB(listEl, validKmbStopId_Uni, '大學站');
         } catch (e) { listEl.innerHTML = '<div class="status-msg error">更新失敗</div>'; }
     }
@@ -469,7 +482,6 @@
             element.innerHTML = etas.slice(0, 3).map(bus => {
                 const mins = getMins(bus.eta);
                 const isUrgent = mins === '即將' || mins === '0分' || mins === '1分' || mins === '2分';
-                // 修改：直接使用 displayLabel (例如 "博研路" 或 "大學站")
                 return `
                 <div class="schedule-item">
                     <span class="dest-name">${displayLabel}</span>
