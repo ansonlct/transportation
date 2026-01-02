@@ -13,6 +13,7 @@
     <title>交通出行</title>
     <style>
         :root {
+            /* 淺色模式變數 (預設) */
             --bg-color: #F2F2F7;
             --card-bg: #FFFFFF;
             --text-main: #1C1C1E;
@@ -20,7 +21,23 @@
             --kmb-red: #E3001B;
             --mtr-blue: #0072BC;
             --accent: #007AFF;
+            --modal-bg: rgba(255, 255, 255, 0.95);
+            --modal-text: #000;
+            --separator: #E5E5EA;
+            --tab-bar-bg: rgba(255, 255, 255, 0.95);
             --tab-bar-height: 60px;
+        }
+
+        /* 黑暗模式變數 */
+        body.dark-mode {
+            --bg-color: #000000;
+            --card-bg: #1C1C1E;
+            --text-main: #FFFFFF;
+            --text-sub: #98989D;
+            --modal-bg: rgba(44, 44, 46, 0.95);
+            --modal-text: #FFF;
+            --separator: #38383A;
+            --tab-bar-bg: rgba(28, 28, 30, 0.95);
         }
 
         /* --- 全域禁止選取與系統選單 --- */
@@ -32,15 +49,12 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* 恢復表單元件的互動性 */
         select, input, textarea {
             -webkit-user-select: auto;
             user-select: auto;
         }
 
-        html {
-            height: 100%;
-        }
+        html { height: 100%; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
@@ -49,19 +63,15 @@
             padding: 0;
             color: var(--text-main);
             -webkit-font-smoothing: antialiased;
-            
-            /* Web App 關鍵佈局 */
             height: 100dvh;
             overflow: hidden; 
             display: flex;
             flex-direction: column;
-            
-            /* 避開 iPhone 瀏海與底部橫條 */
             padding-top: env(safe-area-inset-top);
             padding-bottom: 0; 
+            transition: background-color 0.3s, color 0.3s;
         }
 
-        /* 主容器 */
         .container { 
             display: flex;
             flex-direction: column;
@@ -78,23 +88,38 @@
             flex-shrink: 0;
             padding: 10px 16px; 
             text-align: center;
+            position: relative; /* 為了定位齒輪 */
         }
         h1 { font-size: 1.2rem; margin: 0; font-weight: 600; }
         
-        /* 修改：更新時間文字樣式 */
         .update-time { 
             font-size: 0.8rem; 
             color: var(--text-sub); 
             margin-top: 4px; 
-            cursor: pointer; /* 提示可點擊 */
+            cursor: pointer;
             transition: color 0.1s, transform 0.1s;
-            display: inline-block; /* 讓 transform 生效 */
-            padding: 2px 8px; /* 增加點擊範圍 */
+            display: inline-block; 
+            padding: 2px 8px;
         }
         .update-time:active {
-            color: var(--accent); /* 點擊時變色 */
-            transform: scale(0.95); /* 點擊時微縮 */
+            color: var(--accent);
+            transform: scale(0.95);
         }
+
+        /* 設定按鈕 (齒輪) */
+        .settings-btn {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.4rem;
+            cursor: pointer;
+            opacity: 0.7;
+            padding: 8px; /* 增加點擊範圍 */
+            margin: -8px;
+            z-index: 100;
+        }
+        .settings-btn:active { opacity: 1; }
 
         /* --- 內容區域 --- */
         .tab-content { 
@@ -117,6 +142,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             overflow: hidden;
             border: 1px solid rgba(0,0,0,0.05);
+            transition: background 0.3s;
         }
 
         .card-header {
@@ -129,7 +155,7 @@
 
         .card-content {
             padding: 4px 16px 16px 16px;
-            background: white;
+            background: var(--card-bg);
             min-height: 80px;
             transition: opacity 0.3s ease-in-out;
         }
@@ -145,13 +171,13 @@
             justify-content: space-between;
             align-items: center;
             padding: 12px 0;
-            border-bottom: 1px dashed #E5E5EA;
+            border-bottom: 1px dashed var(--separator);
         }
         .schedule-item:last-child { border-bottom: none; }
 
-        .dest-name { font-size: 1.1rem; font-weight: 600; color: #333; }
+        .dest-name { font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
         .time-info { text-align: right; }
-        .eta-time { font-size: 1.2rem; font-weight: 700; display: block; color: #1C1C1E; }
+        .eta-time { font-size: 1.2rem; font-weight: 700; display: block; color: var(--text-main); }
 
         .eta-minutes {
             font-size: 0.85rem;
@@ -163,7 +189,17 @@
             display: inline-block;
             margin-top: 4px;
         }
+        /* Dark Mode 下綠色調整，避免太刺眼 */
+        body.dark-mode .eta-minutes {
+            background: rgba(52, 199, 89, 0.2);
+            color: #32D74B;
+        }
+        
         .urgent { color: #FF3B30 !important; background: #FFEBEE !important; }
+        body.dark-mode .urgent {
+            background: rgba(255, 69, 58, 0.2) !important;
+            color: #FF453A !important;
+        }
 
         .status-msg { text-align: center; padding: 20px; color: var(--text-sub); font-size: 0.9rem; }
         .error { color: #FF3B30; }
@@ -172,52 +208,27 @@
         .kmb-header { background: linear-gradient(135deg, #E3001B, #C20017); }
         .mtr-header { background: linear-gradient(135deg, #0072BC, #005691); }
         
-        /* 藥丸標籤 (九巴) */
         .stop-detail { font-size: 0.75rem; color: var(--kmb-red); background: white; padding: 4px 10px; border-radius: 12px; font-weight: 700; }
-        
-        /* 藥丸標籤 (港鐵 - 右側) */
         .stop-detail-mtr { 
-            font-size: 0.75rem; 
-            color: var(--mtr-blue); 
-            background: white; 
-            padding: 4px 10px; 
-            border-radius: 12px; 
-            font-weight: 700; 
-            white-space: nowrap;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-left: auto; 
-            cursor: pointer;
+            font-size: 0.75rem; color: var(--mtr-blue); background: white; 
+            padding: 4px 10px; border-radius: 12px; font-weight: 700; white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-left: auto; cursor: pointer;
         }
-
         .plat-badge { font-size: 0.75rem; background: var(--mtr-blue); color: white; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
 
         /* --- 美化版下拉選單 --- */
         .station-select {
-            appearance: none;
-            -webkit-appearance: none;
+            appearance: none; -webkit-appearance: none;
             background-color: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            font-size: 1.1rem;
-            font-weight: 700;
-            padding: 6px 32px 6px 12px;
-            border-radius: 12px;
-            cursor: pointer;
-            outline: none;
-            font-family: inherit;
+            color: white; font-size: 1.1rem; font-weight: 700;
+            padding: 6px 32px 6px 12px; border-radius: 12px;
+            cursor: pointer; outline: none; font-family: inherit;
             background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 6px center;
-            background-size: 20px;
-            margin: 0 4px;
-            transition: all 0.2s;
+            background-repeat: no-repeat; background-position: right 6px center; background-size: 20px;
+            margin: 0 4px; transition: all 0.2s;
         }
-        
-        .station-select:active, .station-select:focus {
-            background-color: rgba(255, 255, 255, 0.3);
-            border-color: rgba(255, 255, 255, 0.6);
-        }
-        .station-select option { background-color: white; color: #333; font-weight: normal; }
+        .station-select option { background-color: var(--card-bg); color: var(--text-main); }
         .header-text { font-size: 1.1rem; font-weight: 700; white-space: nowrap; }
 
         /* 方向切換 (Tab 1) */
@@ -225,38 +236,72 @@
         .dir-opt { font-size: 0.75rem; color: rgba(255, 255, 255, 0.7); padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; user-select: none; font-weight: 500; }
         .dir-opt.active { background: white; color: var(--mtr-blue); font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
-        /* 底部導航 (固定) */
+        /* 底部導航 */
         .tab-bar { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            width: 100%; 
-            height: var(--tab-bar-height); 
-            background: rgba(255, 255, 255, 0.95); 
-            backdrop-filter: blur(10px); 
-            border-top: 1px solid #E5E5EA; 
-            display: flex; 
-            justify-content: space-around; 
-            align-items: center; 
-            z-index: 1000; 
-            padding-bottom: env(safe-area-inset-bottom); 
+            position: fixed; bottom: 0; left: 0; width: 100%; height: var(--tab-bar-height); 
+            background: var(--tab-bar-bg); backdrop-filter: blur(10px); 
+            border-top: 1px solid var(--separator); 
+            display: flex; justify-content: space-around; align-items: center; 
+            z-index: 1000; padding-bottom: env(safe-area-inset-bottom);
+            transition: background 0.3s;
         }
         .tab-item { flex: 1; text-align: center; padding: 8px 0; color: #C7C7CC; cursor: pointer; font-size: 0.7rem; transition: color 0.2s; }
         .tab-item.active { color: var(--accent); transform: scale(1.05); }
         .tab-icon { display: block; font-size: 1.5rem; margin-bottom: 2px; }
 
-        /* 署名水印 */
+        /* 水印 */
         .watermark {
-            position: fixed;
-            bottom: calc(var(--tab-bar-height) + 10px + env(safe-area-inset-bottom));
-            right: 16px;
-            font-size: 0.6rem;
-            color: #C7C7CC;
-            pointer-events: none;
-            z-index: 900;
-            font-weight: 500;
-            letter-spacing: 0.5px;
+            position: fixed; bottom: calc(var(--tab-bar-height) + 10px + env(safe-area-inset-bottom));
+            right: 16px; font-size: 0.6rem; color: var(--text-sub); pointer-events: none;
+            z-index: 900; font-weight: 500; letter-spacing: 0.5px;
         }
+
+        /* --- 設定彈窗 (Modal) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); z-index: 2000;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s;
+            backdrop-filter: blur(2px);
+        }
+        .modal-overlay.open { opacity: 1; visibility: visible; }
+
+        .modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+            width: 80%; max-width: 320px;
+            background: var(--modal-bg);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-radius: 16px; padding: 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 2001;
+            opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: var(--modal-text);
+        }
+        .modal.open { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }
+
+        .modal-header {
+            padding: 16px; border-bottom: 1px solid var(--separator);
+            font-weight: 600; font-size: 1.1rem; text-align: center; position: relative;
+        }
+        .close-btn {
+            position: absolute; right: 16px; top: 16px; color: var(--text-sub); cursor: pointer; font-size: 1.2rem; line-height: 1.1rem;
+        }
+        
+        .setting-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px; border-bottom: 1px solid var(--separator);
+            font-size: 1rem; cursor: pointer;
+        }
+        .setting-row:last-child { border-bottom: none; }
+        .setting-row:active { background: rgba(128,128,128, 0.1); }
+
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 50px; height: 30px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #E9E9EA; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: #34C759; }
+        input:checked + .slider:before { transform: translateX(20px); }
+        body.dark-mode .slider { background-color: #39393D; } /* Dark mode inactive toggle */
 
     </style>
 </head>
@@ -265,8 +310,9 @@
 <div class="container">
     <header>
         <h1 id="page-title">白石角出行</h1>
-        <!-- 修改：加入 onclick 事件與 title 提示 -->
         <div class="update-time" id="last-updated" onclick="refreshAll()" title="點擊立即更新">等待更新...</div>
+        <!-- 設定按鈕 -->
+        <div class="settings-btn" onclick="openSettings()">⚙️</div>
     </header>
 
     <!-- ================= 分頁 1 ================= -->
@@ -345,6 +391,26 @@
     </div>
 </div>
 
+<!-- 設定彈窗 -->
+<div id="modal-overlay" class="modal-overlay" onclick="closeSettings()"></div>
+<div id="settings-modal" class="modal">
+    <div class="modal-header">
+        <span>設定</span>
+        <span class="close-btn" onclick="closeSettings()">✕</span>
+    </div>
+    <div class="setting-row">
+        <span>黑暗模式</span>
+        <label class="switch">
+            <input type="checkbox" id="dark-mode-toggle" onchange="toggleDarkMode()">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div class="setting-row" onclick="window.location.href='https://payme.hsbc/donate'">
+        <span>Buy me Coffee! ☕</span>
+        <span style="color:var(--text-sub)">›</span>
+    </div>
+</div>
+
 <!-- 署名水印 -->
 <div class="watermark">Designed by Anson Lam</div>
 
@@ -361,8 +427,50 @@
 </nav>
 
 <script>
-    // --- 防止雙指縮放等手勢 ---
     document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+
+    // --- 設定功能邏輯 ---
+    function openSettings() {
+        document.getElementById('modal-overlay').classList.add('open');
+        document.getElementById('settings-modal').classList.add('open');
+    }
+
+    function closeSettings() {
+        document.getElementById('modal-overlay').classList.remove('open');
+        document.getElementById('settings-modal').classList.remove('open');
+    }
+
+    // --- 黑暗模式邏輯 ---
+    function toggleDarkMode() {
+        const isChecked = document.getElementById('dark-mode-toggle').checked;
+        if (isChecked) {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('darkMode', 'enabled');
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('darkMode', 'disabled');
+        }
+    }
+
+    // 初始化黑暗模式
+    function initDarkMode() {
+        const savedMode = localStorage.getItem('darkMode');
+        const toggle = document.getElementById('dark-mode-toggle');
+        
+        if (savedMode === 'enabled') {
+            document.body.classList.add('dark-mode');
+            toggle.checked = true;
+        } else if (savedMode === 'disabled') {
+            document.body.classList.remove('dark-mode');
+            toggle.checked = false;
+        } else {
+            // 跟隨系統
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.body.classList.add('dark-mode');
+                toggle.checked = true;
+            }
+        }
+    }
 
     // --- 工具 ---
     const formatTime = (iso) => iso ? new Date(iso).toLocaleTimeString('zh-HK', {hour:'2-digit', minute:'2-digit', hour12:false}) : '--:--';
@@ -389,7 +497,6 @@
         'LMC': { dir: 'DOWN', label: '往金鐘' }
     };
 
-    // --- 分頁切換 ---
     function switchTab(tabId) {
         currentTab = tabId;
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -401,7 +508,6 @@
         refreshAll();
     }
 
-    // --- Tab 1: 港鐵切換過場 ---
     function switchMtrDir(dir) {
         if (mtrUniDirection === dir) return;
         mtrUniDirection = dir;
@@ -410,7 +516,6 @@
         smoothRefresh('mtr-list-1', fetchMTR_Uni);
     }
 
-    // --- Tab 2: 港鐵車站切換過場 ---
     function switchReturnStation(stationCode) {
         if (selectedReturnStation === stationCode) return;
         selectedReturnStation = stationCode;
@@ -429,7 +534,6 @@
         }, 300);
     }
 
-    // --- KMB 邏輯 ---
     async function fetchKMB_PokYin() {
         if(currentTab !== 1) return; 
         const listEl = document.getElementById('kmb-list-1');
@@ -450,7 +554,6 @@
                 }
                 if (!validKmbStopId_PokYin && stops.length) validKmbStopId_PokYin = stops[0];
             }
-            // 這裡顯示 "博研路"
             renderKMB(listEl, validKmbStopId_PokYin, '博研路');
         } catch (e) { listEl.innerHTML = '<div class="status-msg error">更新失敗</div>'; }
     }
@@ -465,7 +568,6 @@
                 const firstStop = routeData.data.find(s => s.seq === '1');
                 if (firstStop) validKmbStopId_Uni = firstStop.stop;
             }
-            // 這裡顯示 "大學站"
             renderKMB(listEl, validKmbStopId_Uni, '大學站');
         } catch (e) { listEl.innerHTML = '<div class="status-msg error">更新失敗</div>'; }
     }
@@ -494,7 +596,6 @@
         }
     }
 
-    // --- MTR 邏輯 ---
     async function fetchMTR_Uni() {
         if(currentTab !== 1) return;
         await renderMTR('UNI', document.getElementById('mtr-list-1'), mtrUniDirection);
@@ -558,7 +659,8 @@
         }
     }
 
-    // 啟動 (30秒自動更新)
+    // 啟動
+    initDarkMode();
     refreshAll();
     setInterval(refreshAll, 30000);
 
