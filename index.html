@@ -157,6 +157,33 @@
         .search-input-field { width: 100%; box-sizing: border-box; padding: 10px 16px 10px 38px; border-radius: 12px; border: 1px solid var(--separator); font-size: 1rem; background: var(--card-bg); color: var(--text-main); outline: none; -webkit-appearance: none; }
 
         /* =========================================
+           搜尋進度棒動畫 (Progress Bar)
+           ========================================= */
+        .progress-container {
+            position: absolute;
+            bottom: 0; 
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: transparent;
+            overflow: hidden;
+            display: none;
+            z-index: 25;
+        }
+        .progress-bar {
+            position: absolute;
+            height: 100%;
+            background-color: var(--accent);
+            border-radius: 3px;
+            animation: progress-indeterminate 1.5s infinite ease-in-out;
+        }
+        @keyframes progress-indeterminate {
+            0% { left: -35%; width: 35%; }
+            50% { left: 30%; width: 50%; }
+            100% { left: 100%; width: 35%; }
+        }
+
+        /* =========================================
            骨架屏載入動畫 (Skeleton Screen)
            ========================================= */
         @keyframes shimmer {
@@ -317,16 +344,11 @@
                     <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1.1rem; color: var(--text-sub);">🔍</span>
                     <input type="text" id="route-search-input" class="search-input-field" placeholder="搜尋九巴及城巴路線 (如: 74X)" onkeyup="onTab4Search()">
                 </div>
-            </div>
-            <div class="filter-header">
-                <div class="filter-title">搜尋附近車站 (米) :</div>
-                <div class="radius-selector">
-                    <div id="tab4-rad-ALL" class="rad-btn active" onclick="applyTab4Radius('ALL')">全部</div>
-                    <div id="tab4-rad-100" class="rad-btn" onclick="applyTab4Radius(100)">100</div>
-                    <div id="tab4-rad-300" class="rad-btn" onclick="applyTab4Radius(300)">300</div>
-                    <div id="tab4-rad-500" class="rad-btn" onclick="applyTab4Radius(500)">500</div>
+                <div id="tab4-progress-container" class="progress-container">
+                    <div class="progress-bar"></div>
                 </div>
             </div>
+            
             <div id="tab4-skeleton" style="display: none;">
                 <script>
                     for(let i=0; i<8; i++) {
@@ -633,7 +655,7 @@
     
     window.globalStopsList = [];
     window.globalStopsMap = {};
-    window.globalRouteStops = null; // 全域快取全港巴士路線網格字典 (加速篩選)
+    window.globalRouteStops = null; 
     window.routeStopsCache = {};
 
     function toggleSkeleton(containerId, show) {
@@ -665,7 +687,6 @@
                 window.routeStopsCache[key] = data.data;
                 return data.data;
             } else {
-                // 如果已經有全域字典，直接本地過濾，實現 0.01 秒極速讀取
                 if (window.globalRouteStops) {
                     let boundCode = bound === 'outbound' ? 'O' : 'I';
                     let stops = window.globalRouteStops.filter(rs => rs.route === route && rs.bound === boundCode && rs.service_type === '1');
@@ -682,7 +703,6 @@
         } catch(e) { return []; }
     }
 
-    // ETA 排版
     function generateEtaHtml(sortedEtas) {
         if (!sortedEtas || sortedEtas.length === 0) {
             return `<span style="font-size:0.85rem; color:var(--text-sub);">暫無班次</span>`;
@@ -707,7 +727,7 @@
     }
 
     // ==========================================
-    // Tab 3: 回家目錄邏輯 (極速最佳化)
+    // Tab 3: 回家目錄邏輯
     // ==========================================
     const targetBusRoutes = [
         '73D', '263C', '272P', '272X', '900', '900X', '907D', 
@@ -732,7 +752,6 @@
                 stopsData.data.forEach(s => { window.globalStopsMap[s.stop] = s.name_tc; });
             }
 
-            // 同步下載「全港巴士路線網格字典」(極大提升後續定位篩選速度)
             if (!window.globalRouteStops) {
                 fetch('https://data.etabus.gov.hk/v1/transport/kmb/route-stop')
                     .then(res => res.json())
@@ -851,7 +870,6 @@
                             boardStopName = window.globalStopsMap[stops[boardIdx].stop];
                         }
                     } else {
-                        // 利用本地快取字典達成極速過濾
                         let boundCode = dir.bound === 'O' ? 'O' : 'I';
                         let stops = [];
                         if (window.globalRouteStops) {
@@ -909,11 +927,10 @@
     }
 
     // ==========================================
-    // Tab 4: 全港巴士查詢邏輯 (高速反向查表法 + 無限滾動)
+    // Tab 4: 全港巴士查詢邏輯 
     // ==========================================
     window.allRoutesGroupsTab4 = {};
     window.tab4Loaded = false;
-    window.tab4CurrentRadius = 'ALL';
     window.tab4SearchText = '';
     window.routeEtaStatusTab4 = {};
     
@@ -922,11 +939,22 @@
     window.tab4CurrentPage = 0;
     window.isTab4LoadingMore = false;
 
+    // 非同步進度條控制器
+    window.tab4ActiveFetches = 0;
+    function setTab4Loading(isActive) {
+        if (isActive) window.tab4ActiveFetches++;
+        else window.tab4ActiveFetches = Math.max(0, window.tab4ActiveFetches - 1);
+        
+        const p = document.getElementById('tab4-progress-container');
+        if (p) p.style.display = window.tab4ActiveFetches > 0 ? 'block' : 'none';
+    }
+
     async function initTab4() {
         if (window.tab4Loaded) return;
         const container = document.getElementById('tab4-all-routes-container');
         
         toggleSkeleton('tab4-skeleton', true);
+        setTab4Loading(true); // 開始顯示載入進度
         
         try {
             if (window.globalStopsList.length === 0) {
@@ -966,29 +994,40 @@
             });
 
             window.tab4Loaded = true;
-            updateTab4View(); 
+            await updateTab4View(); 
             
         } catch(e) {
             toggleSkeleton('tab4-skeleton', false);
             container.innerHTML = '<span class="error" style="padding:20px; display:block;">載入失敗，請檢查網絡。</span>';
             container.style.display = 'block';
+        } finally {
+            setTab4Loading(false); // 結束載入
         }
     }
 
     function onTab4Search() {
         window.tab4SearchText = document.getElementById('route-search-input').value.trim().toUpperCase();
+        
+        // 輸入時立即顯示藍色載入進度
+        setTab4Loading(true);
+        if (window.tab4SearchCancel) window.tab4SearchCancel(); // 取消上一次未結算的進度狀態
+        
+        let cancelled = false;
+        window.tab4SearchCancel = () => {
+            if (!cancelled) {
+                cancelled = true;
+                setTab4Loading(false);
+            }
+        };
+
         clearTimeout(window.tab4SearchTimeout);
         window.tab4SearchTimeout = setTimeout(() => {
+            if (window.tab4SearchCancel) {
+                window.tab4SearchCancel();
+                window.tab4SearchCancel = null;
+            }
             updateTab4View();
         }, 300); 
-    }
-
-    function applyTab4Radius(radius) {
-        if (window.tab4CurrentRadius === radius) return;
-        document.querySelectorAll('#tab-4 .rad-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`tab4-rad-${radius}`).classList.add('active');
-        window.tab4CurrentRadius = radius;
-        updateTab4View();
     }
 
     async function updateTab4View() {
@@ -1007,91 +1046,7 @@
             routeNames = routeNames.filter(r => r.includes(window.tab4SearchText));
         }
 
-        if (window.tab4CurrentRadius !== 'ALL') {
-            let lat, lon;
-            try {
-                const pos = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
-                });
-                lat = pos.coords.latitude;
-                lon = pos.coords.longitude;
-            } catch(e) {
-                toggleSkeleton('tab4-skeleton', false);
-                container.innerHTML = `<div class="status-msg error" style="padding: 40px;">定位超時或被拒絕，請確保已開啟定位權限。</div>`;
-                container.style.display = 'block';
-                return;
-            }
-
-            let nearbyStops = window.globalStopsList.map(s => {
-                return { ...s, distance: getDistance(lat, lon, s.lat, s.long) * 1000 };
-            }).filter(s => s.distance <= window.tab4CurrentRadius);
-
-            let nearbyStopIds = new Set(nearbyStops.map(s => s.stop));
-
-            if(nearbyStopIds.size === 0) {
-                toggleSkeleton('tab4-skeleton', false);
-                target.innerHTML = `<div class="status-msg" style="padding: 40px;">附近 ${window.tab4CurrentRadius} 米內沒有巴士站。</div>`;
-                container.style.display = 'block';
-                return;
-            }
-
-            // 極速過濾：使用字典快速比對
-            for (let rName of routeNames) {
-                let dirs = window.allRoutesGroupsTab4[rName];
-                let validDirs = [];
-
-                for (let dir of dirs) {
-                    let isCitybus = dir.isCitybus;
-                    let boardIdx = -1;
-                    let boardStopDistance = 99999;
-                    let boardStopName = '';
-
-                    if (isCitybus) {
-                        let stops = await getRouteStopsCached(dir.route, dir.bound === 'O' ? 'outbound' : 'inbound', true);
-                        for(let i=0; i<stops.length; i++) {
-                            if(stops[i].lat) {
-                                let dist = getDistance(lat, lon, stops[i].lat, stops[i].long)*1000;
-                                if(dist <= window.tab4CurrentRadius && dist < boardStopDistance) {
-                                    boardStopDistance = dist;
-                                    boardIdx = i;
-                                }
-                            }
-                        }
-                        if (boardIdx !== -1) {
-                            boardStopName = window.globalStopsMap[stops[boardIdx].stop];
-                        }
-                    } else {
-                        let boundCode = dir.bound === 'O' ? 'O' : 'I';
-                        let stops = [];
-                        if (window.globalRouteStops) {
-                            stops = window.globalRouteStops.filter(rs => rs.route === rName && rs.bound === boundCode && rs.service_type === '1');
-                            stops.sort((a, b) => parseInt(a.seq) - parseInt(b.seq));
-                        } else {
-                            let boundStr = dir.bound === 'O' ? 'outbound' : 'inbound';
-                            stops = await getRouteStopsCached(dir.route, boundStr, false);
-                        }
-                        
-                        boardIdx = stops.findIndex(s => nearbyStopIds.has(s.stop));
-                        if (boardIdx !== -1) {
-                            let match = nearbyStops.find(ns => ns.stop === stops[boardIdx].stop);
-                            boardStopDistance = match.distance;
-                            boardStopName = window.globalStopsMap[match.stop];
-                        }
-                    }
-
-                    if (boardIdx !== -1) {
-                        validDirs.push({
-                            ...dir,
-                            nearbyHint: `於 ${boardStopName} 上車 (約 ${Math.round(boardStopDistance)}米)`
-                        });
-                    }
-                }
-
-                if (validDirs.length > 0) filteredGroups[rName] = validDirs;
-            }
-        } else {
-            for (let r of routeNames) filteredGroups[r] = window.allRoutesGroupsTab4[r];
-        }
+        for (let r of routeNames) filteredGroups[r] = window.allRoutesGroupsTab4[r];
 
         window.tab4FilteredGroups = filteredGroups;
         window.tab4DisplayRoutes = Object.keys(filteredGroups).sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
@@ -1106,10 +1061,10 @@
         container.style.display = 'block';
     }
 
-    // 漸進式載入邏輯 (每次載入 20 筆)
     async function loadMoreTab4Routes() {
         if (window.isTab4LoadingMore) return;
         if (window.tab4CurrentPage * 20 >= window.tab4DisplayRoutes.length) return;
+        
         window.isTab4LoadingMore = true;
 
         const start = window.tab4CurrentPage * 20;
@@ -1127,55 +1082,57 @@
 
         let routesToFetchEta = chunkNames.filter(r => !window.tab4FilteredGroups[r][0].isCitybus);
         
-        // 悄悄在背後更新透明度
         fetchAndApplyEtaTab4(routesToFetchEta).finally(() => {
             window.isTab4LoadingMore = false;
         });
     }
 
-    // 在背景抓取 ETA，根據單一方向自動調整透明度
     async function fetchAndApplyEtaTab4(routes) {
-        const chunkSize = 20;
-        for (let i = 0; i < routes.length; i += chunkSize) {
-            const chunk = routes.slice(i, i + chunkSize);
-            const etaPromises = chunk.map(route => 
-                fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/1`)
-                    .then(res => res.json())
-                    .then(data => ({ route, data }))
-                    .catch(err => ({ route, error: err }))
-            );
-            
-            const etaResults = await Promise.all(etaPromises);
-            etaResults.forEach(res => {
-                if (res.data && res.data.data) {
-                    let hasO = false;
-                    let hasI = false;
-                    res.data.data.forEach(e => {
-                        if (e.eta) {
-                            if (e.dir === 'O') hasO = true;
-                            if (e.dir === 'I') hasI = true;
-                        }
-                    });
-                    
-                    window.routeEtaStatusTab4[`${res.route}-O`] = hasO;
-                    window.routeEtaStatusTab4[`${res.route}-I`] = hasI;
+        setTab4Loading(true); // 下載 ETA 時顯示藍色進度條
+        try {
+            const chunkSize = 20;
+            for (let i = 0; i < routes.length; i += chunkSize) {
+                const chunk = routes.slice(i, i + chunkSize);
+                const etaPromises = chunk.map(route => 
+                    fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/1`)
+                        .then(res => res.json())
+                        .then(data => ({ route, data }))
+                        .catch(err => ({ route, error: err }))
+                );
+                
+                const etaResults = await Promise.all(etaPromises);
+                etaResults.forEach(res => {
+                    if (res.data && res.data.data) {
+                        let hasO = false;
+                        let hasI = false;
+                        res.data.data.forEach(e => {
+                            if (e.eta) {
+                                if (e.dir === 'O') hasO = true;
+                                if (e.dir === 'I') hasI = true;
+                            }
+                        });
+                        
+                        window.routeEtaStatusTab4[`${res.route}-O`] = hasO;
+                        window.routeEtaStatusTab4[`${res.route}-I`] = hasI;
 
-                    let elO = document.getElementById(`route-dir-${res.route}-O`);
-                    if(elO) {
-                        elO.style.opacity = hasO ? '1' : '0.35';
-                        elO.style.filter = hasO ? 'none' : 'grayscale(100%)';
+                        let elO = document.getElementById(`route-dir-${res.route}-O`);
+                        if(elO) {
+                            elO.style.opacity = hasO ? '1' : '0.35';
+                            elO.style.filter = hasO ? 'none' : 'grayscale(100%)';
+                        }
+                        let elI = document.getElementById(`route-dir-${res.route}-I`);
+                        if(elI) {
+                            elI.style.opacity = hasI ? '1' : '0.35';
+                            elI.style.filter = hasI ? 'none' : 'grayscale(100%)';
+                        }
                     }
-                    let elI = document.getElementById(`route-dir-${res.route}-I`);
-                    if(elI) {
-                        elI.style.opacity = hasI ? '1' : '0.35';
-                        elI.style.filter = hasI ? 'none' : 'grayscale(100%)';
-                    }
-                }
-            });
+                });
+            }
+        } finally {
+            setTab4Loading(false); // ETA 下載完成時收起進度條
         }
     }
 
-    // 觸發滾動載入
     document.getElementById('tab-4').addEventListener('scroll', function() {
         if (this.style.display !== 'none' && document.getElementById('tab4-route-list-view').style.display !== 'none') {
             if (this.scrollHeight - this.scrollTop <= this.clientHeight + 400) {
@@ -1198,7 +1155,6 @@
             let dirs = groupsData[rName];
             
             let isRowInactive = false;
-            // 只有 Tab 3 (回家目錄) 會將雙向無班次的整個卡片丟到最下方
             if (isTab3) {
                 let hasAnyEta = false;
                 dirs.forEach(d => {
@@ -1252,7 +1208,6 @@
             const boundStr = dir.bound === 'O' ? 'outbound' : 'inbound';
             const boundCode = dir.bound === 'O' ? 'O' : 'I';
             
-            // 單一方向透明度 (Tab 3 是預先知道，Tab 4 是預設半透明等待載入)
             let dirOpacityStyle = '';
             if (!isRowInactive) { 
                 let hasEta = true;
@@ -1261,7 +1216,6 @@
                         hasEta = window.routeEtaStatusTab3[`${rName}-${boundCode}`];
                         if (!hasEta) dirOpacityStyle = 'opacity: 0.35; filter: grayscale(100%);';
                     } else {
-                        // Tab 4 預設半透明，等非同步更新會亮起來
                         hasEta = window.routeEtaStatusTab4[`${rName}-${boundCode}`];
                         dirOpacityStyle = hasEta ? 'opacity: 1; filter: none;' : 'opacity: 0.35; filter: grayscale(100%); transition: all 0.3s;';
                     }
