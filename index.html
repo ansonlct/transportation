@@ -142,31 +142,27 @@
         }
         .radius-selector {
             display: inline-flex;
-            background: #EFEFEF;
+            background: rgba(128,128,128,0.1);
             border-radius: 6px;
-            border: 1px solid #D1D1D6;
+            border: 1px solid var(--separator);
             overflow: hidden;
         }
         .rad-btn {
             padding: 4px 12px;
             font-size: 0.85rem;
-            color: #007AFF;
+            color: var(--text-main);
             cursor: pointer;
-            border-right: 1px solid #D1D1D6;
-            background: #F8F8F8;
+            border-right: 1px solid var(--separator);
+            background: transparent;
             font-weight: 500;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
         .rad-btn:last-child { border-right: none; }
         .rad-btn.active {
-            background: #FFFFFF;
-            color: #1C1C1E;
+            background: var(--accent);
+            color: #FFF;
             font-weight: 700;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        body.dark-mode .radius-selector { background: #1C1C1E; border-color: #38383A; }
-        body.dark-mode .rad-btn { background: #2C2C2E; color: #0A84FF; border-color: #38383A; }
-        body.dark-mode .rad-btn.active { background: #3A3A3C; color: #FFF; }
 
         .route-list-wrapper { background: var(--card-bg); }
         .route-list-row {
@@ -392,7 +388,7 @@
 <nav class="tab-bar">
     <div class="tab-item active" onclick="switchTab(1)"><span class="tab-icon">🏠</span>白石角出發</div>
     <div class="tab-item" onclick="switchTab(2)"><span class="tab-icon">🛤️</span>我要回家</div>
-    <div class="tab-item" onclick="switchTab(3)"><span class="tab-icon">🗺️</span>交通目錄</div>
+    <div class="tab-item" onclick="switchTab(3)"><span class="tab-icon">🗺️</span>回家目錄</div>
 </nav>
 
 <script>
@@ -461,13 +457,11 @@
         currentTab = tabId;
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.getElementById(`tab-${tabId}`).classList.add('active');
-        document.querySelectorAll('.tab-item').forEach((el, index) => { el.classList.toggle('active', index + 1 === tabId); });
-        
-        if (tabId === 1) document.getElementById('page-title').innerText = '白石角出發';
-        else if (tabId === 2) document.getElementById('page-title').innerText = '我要回家';
-        else if (tabId === 3) document.getElementById('page-title').innerText = '交通目錄';
-        
-        if (tabId === 1 || tabId === 2) refreshAll();
+        document.querySelectorAll('.tab-item').forEach((el, index) => {
+            el.classList.toggle('active', index + 1 === tabId);
+        });
+        document.getElementById('page-title').innerText = tabId === 1 ? '白石角出發' : (tabId === 2 ? '我要回家' : '回家目錄');
+        refreshAll();
         if (tabId === 3) initTab3();
     }
 
@@ -489,9 +483,12 @@
 
     function smoothRefresh(elementId, fetchFunc) {
         const el = document.getElementById(elementId);
-        if (!el) return;
         el.classList.add('fading');
-        setTimeout(() => { fetchFunc().then(() => { el.classList.remove('fading'); }); }, 300);
+        setTimeout(() => {
+            fetchFunc().then(() => {
+                el.classList.remove('fading');
+            });
+        }, 300);
     }
 
     async function fetchKMB_PokYin() {
@@ -619,11 +616,19 @@
         }
     }
 
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; 
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+
     // ==========================================
-    // Tab 3 專用邏輯：雲滙巴士目錄與定位篩選
+    // Tab 3 專用邏輯：回家目錄與定位篩選 (結合城巴 API)
     // ==========================================
     
-    // 目標車站關鍵字 (新增：逸瓏灣)
     const targetKeywords = ['科學園', '雲滙', '雲匯', '天賦海灣', '創新路', '白石角', '科研路', '博研路', '白石角變電站', '逸瓏灣'];
     
     const targetBusRoutes = [
@@ -632,7 +637,6 @@
         '64X', '65X', '82D', '272A', '274', '274P'
     ];
 
-    // 全局緩存，提升切換速度
     window.globalStopsList = [];
     window.globalStopsMap = {};
     window.cachedRouteGroups = {};
@@ -644,7 +648,6 @@
         if (container.innerHTML !== '') return; 
 
         try {
-            // 1. 抓取全港車站列表並緩存
             if (window.globalStopsList.length === 0) {
                 const stopsRes = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/stop');
                 const stopsData = await stopsRes.json();
@@ -652,7 +655,6 @@
                 stopsData.data.forEach(s => { window.globalStopsMap[s.stop] = s.name_tc; });
             }
 
-            // 2. 抓取路線資料並分組
             const routesRes = await fetch('https://data.etabus.gov.hk/v1/transport/kmb/route/');
             const routesData = await routesRes.json();
 
@@ -666,12 +668,12 @@
                 }
             });
 
+            // 加入城巴 582
             window.cachedRouteGroups['582'] = [
-                { route: '582', bound: 'O', dest_tc: '西沙 GO PARK', isCitybus: true },
-                { route: '582', bound: 'I', dest_tc: '白石角', isCitybus: true }
+                { route: '582', bound: 'O', orig_tc: '白石角', dest_tc: '西沙 GO PARK', isCitybus: true },
+                { route: '582', bound: 'I', orig_tc: '西沙 GO PARK', dest_tc: '白石角', isCitybus: true }
             ];
 
-            // 3. 快速取得 ETA 判斷路線是否活躍
             const etaPromises = targetBusRoutes.map(route => 
                 fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/1`)
                     .then(res => res.json())
@@ -690,10 +692,11 @@
                     });
                 }
             });
+            
+            // 預設城巴活躍
             window.routeEtaStatus['582-O'] = true; 
             window.routeEtaStatus['582-I'] = true;
 
-            // 預設顯示全部路線
             applyRadiusFilter('ALL');
 
         } catch(e) {
@@ -701,21 +704,39 @@
         }
     }
 
-    // 取得路線的行車順序緩存
-    async function getRouteStopsCached(route, bound) {
-        let key = `${route}-${bound}`;
+    async function getRouteStopsCached(route, bound, isCitybus) {
+        let key = `${route}-${bound}-${isCitybus}`;
         if (window.routeStopsCache[key]) return window.routeStopsCache[key];
+        
         try {
-            let res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${bound}/1`);
-            let data = await res.json();
-            window.routeStopsCache[key] = data.data;
-            return data.data;
+            if (isCitybus) {
+                let res = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/route-stop/CTB/${route}/${bound}`);
+                let data = await res.json();
+                
+                // 獲取城巴車站詳細坐標及名稱，以便支援定位篩選
+                await Promise.all(data.data.map(async (s) => {
+                    if (!window.globalStopsMap[s.stop] || !s.lat) {
+                        try {
+                            let sRes = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/stop/${s.stop}`);
+                            let sData = await sRes.json();
+                            window.globalStopsMap[s.stop] = sData.data.name_tc;
+                            s.lat = sData.data.lat;
+                            s.long = sData.data.long;
+                        } catch(e) {}
+                    }
+                }));
+                window.routeStopsCache[key] = data.data;
+                return data.data;
+            } else {
+                let res = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${bound}/1`);
+                let data = await res.json();
+                window.routeStopsCache[key] = data.data;
+                return data.data;
+            }
         } catch(e) { return []; }
     }
 
-    // 點擊距離篩選器觸發的邏輯
     async function applyRadiusFilter(radius) {
-        // 更新 UI
         document.querySelectorAll('.rad-btn').forEach(btn => btn.classList.remove('active'));
         document.getElementById(`rad-${radius}`).classList.add('active');
 
@@ -730,13 +751,14 @@
             return;
         }
 
-        // 需要定位篩選
         container.style.display = 'none';
         loading.style.display = 'block';
         loadText.innerText = '正在獲取定位並搜尋附近車站...';
 
         if (!navigator.geolocation) {
-            loading.innerHTML = '<span class="error">您的瀏覽器不支援定位功能。</span>';
+            loading.style.display = 'none';
+            container.innerHTML = `<div class="status-msg error" style="padding: 40px;">您的瀏覽器不支援定位功能。</div>`;
+            container.style.display = 'block';
             return;
         }
 
@@ -744,40 +766,48 @@
             const lat = pos.coords.latitude;
             const lon = pos.coords.longitude;
 
-            // 1. 找出半徑內的車站
             let nearbyStops = window.globalStopsList.map(s => {
                 return { ...s, distance: getDistance(lat, lon, s.lat, s.long) * 1000 };
             }).filter(s => s.distance <= radius);
 
             let nearbyStopIds = new Set(nearbyStops.map(s => s.stop));
 
-            if(nearbyStopIds.size === 0) {
-                loading.style.display = 'none';
-                container.innerHTML = `<div class="status-msg" style="padding: 40px;">附近 ${radius} 米內沒有巴士站。</div>`;
-                container.style.display = 'block';
-                return;
-            }
+            loadText.innerText = '正在分析前往目標車站之路線...';
 
-            // 2. 過濾路線 (必須經過附近車站，且後續車站包含目標關鍵字)
             let filteredGroups = {};
             
-            for (let rName of Object.keys(window.cachedRouteGroups)) {
+            await Promise.all(Object.keys(window.cachedRouteGroups).map(async (rName) => {
                 let dirs = window.cachedRouteGroups[rName];
                 let validDirs = [];
 
-                for (let dir of dirs) {
+                await Promise.all(dirs.map(async (dir) => {
+                    let boundStr = dir.bound === 'O' ? 'outbound' : 'inbound';
+                    let stops = await getRouteStopsCached(dir.route, boundStr, dir.isCitybus);
+                    
+                    let boardIdx = -1;
+                    let boardStopDistance = 99999;
+
                     if (dir.isCitybus) {
-                        validDirs.push(dir); // 城巴無詳細停站資料，保留顯示
-                        continue;
+                        for (let i=0; i<stops.length; i++) {
+                            let s = stops[i];
+                            if (s.lat && s.long) {
+                                let dist = getDistance(lat, lon, s.lat, s.long) * 1000;
+                                if (dist <= radius) {
+                                    boardIdx = i;
+                                    boardStopDistance = dist;
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        boardIdx = stops.findIndex(s => nearbyStopIds.has(s.stop));
+                        if (boardIdx !== -1) {
+                            let matchedStop = nearbyStops.find(ns => ns.stop === stops[boardIdx].stop);
+                            boardStopDistance = matchedStop.distance;
+                        }
                     }
 
-                    let boundStr = dir.bound === 'O' ? 'outbound' : 'inbound';
-                    let stops = await getRouteStopsCached(dir.route, boundStr);
-                    
-                    // 找到第一個在附近的車站
-                    let boardIdx = stops.findIndex(s => nearbyStopIds.has(s.stop));
                     if (boardIdx !== -1) {
-                        // 檢查上車點「之後」的車站是否包含目標車站 (避免搭反方向)
                         let hasTargetAfter = false;
                         for (let i = boardIdx + 1; i < stops.length; i++) {
                             let stopName = window.globalStopsMap[stops[i].stop] || '';
@@ -788,23 +818,22 @@
                         }
                         
                         if (hasTargetAfter) {
-                            let boardStopInfo = nearbyStops.find(ns => ns.stop === stops[boardIdx].stop);
                             validDirs.push({
                                 ...dir,
-                                nearbyHint: `於 ${window.globalStopsMap[boardStopInfo.stop]} 上車 (約 ${Math.round(boardStopInfo.distance)}米)`
+                                nearbyHint: `於 ${window.globalStopsMap[stops[boardIdx].stop]} 上車 (約 ${Math.round(boardStopDistance)}米)`
                             });
                         }
                     }
-                }
+                }));
 
                 if (validDirs.length > 0) {
                     filteredGroups[rName] = validDirs;
                 }
-            }
+            }));
 
             loading.style.display = 'none';
             if (Object.keys(filteredGroups).length === 0) {
-                container.innerHTML = `<div class="status-msg" style="padding: 40px;">附近 ${radius} 米內沒有前往目標車站的巴士路線。</div>`;
+                container.innerHTML = `<div class="status-msg" style="padding: 40px;">附近 ${radius} 米內沒有直達目標車站的路線。</div>`;
             } else {
                 renderCatalogHTML(filteredGroups);
             }
@@ -812,12 +841,11 @@
 
         }, (err) => {
             loading.style.display = 'none';
-            container.innerHTML = '<div class="status-msg error" style="padding: 40px;">無法獲取定位權限，請確認已允許存取位置。</div>';
+            container.innerHTML = `<div class="status-msg error" style="padding: 40px;">定位超時或被拒絕，請確保已開啟 GPS 及瀏覽器定位權限。</div>`;
             container.style.display = 'block';
-        }, { enableHighAccuracy: true });
+        }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
     }
 
-    // 渲染最終的目錄 HTML
     function renderCatalogHTML(groupsData) {
         const allDisplayRoutes = Object.keys(groupsData);
         allDisplayRoutes.sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
@@ -828,7 +856,6 @@
         allDisplayRoutes.forEach(rName => {
             let dirs = groupsData[rName];
             
-            // 判斷整條路線是否完全停駛
             let isRouteActive = false;
             dirs.forEach(d => {
                 const boundCode = d.bound === 'O' ? 'O' : 'I';
@@ -846,12 +873,11 @@
         let finalHtml = `<div class="route-list-wrapper">`;
         finalHtml += activeHtml;
         
-        // 將無班次路線墊底
         if (inactiveHtml !== '') {
             finalHtml += `
             <div style="background: var(--bg-color); padding: 12px 16px; font-size: 0.85rem; font-weight: 700; color: var(--text-sub); border-bottom: 1px solid var(--separator); display:flex; align-items:center;">
                 <div style="flex:1; height:1px; background:var(--separator); margin-right:12px;"></div>
-                暫停服務 / 未有班次之路線
+                暫無班次 / 暫停服務
                 <div style="flex:1; height:1px; background:var(--separator); margin-left:12px;"></div>
             </div>
             <div style="opacity: 0.45; filter: grayscale(50%);">
@@ -864,7 +890,6 @@
         document.getElementById('target-routes-container').innerHTML = finalHtml;
     }
 
-    // 產生單行路線卡片的 HTML (精準還原截圖的 List View 排版)
     function generateRouteRowHtml(rName, dirs, isInactive) {
         let dir1 = dirs.find(d => d.bound === 'O') || dirs[0];
         let dir2 = dirs.find(d => d.bound === 'I') || (dirs.length > 1 ? dirs[1] : null);
@@ -880,12 +905,10 @@
         function makeDirBlock(dir) {
             if(!dir) return `<div class="route-dir-empty"></div>`;
             const boundStr = dir.bound === 'O' ? 'outbound' : 'inbound';
-            
-            // 加入附近車站提示 (如有)
             let nearbyHtml = dir.nearbyHint ? `<div class="dir-nearby-hint">${dir.nearbyHint}</div>` : '';
 
             return `
-            <div class="route-dir-block" onclick="showRouteStops('${dir.route}', '${boundStr}', '${dir.dest_tc}', ${dir.isCitybus || false})">
+            <div class="route-dir-block" onclick="showRouteStops('${dir.route}', '${boundStr}', '${dir.dest_tc}', ${dir.isCitybus || false}, '${badgeColor}')">
                 <div class="dir-dest-container">
                     <span class="dir-prefix">往</span>
                     <span class="dir-dest">${dir.dest_tc}</span>
@@ -907,17 +930,13 @@
         </div>`;
     }
 
-    // 點擊後進入：還原「真實車站順序」的詳細列表
-    async function showRouteStops(route, bound, dest, isCitybus) {
-        if (isCitybus) {
-            alert('這是一條城巴路線 (582)，目前系統串接九巴 API，暫不支援預覽城巴實時班次，敬請見諒！');
-            return;
-        }
-
+    async function showRouteStops(route, bound, dest, isCitybus, badgeColor) {
         document.getElementById('route-list-view').style.display = 'none';
         document.getElementById('route-detail-view').style.display = 'block';
         
-        document.getElementById('detail-route-num').innerText = route;
+        const numEl = document.getElementById('detail-route-num');
+        numEl.innerText = route;
+        numEl.style.color = badgeColor || 'var(--text-main)';
         document.getElementById('detail-route-dest').innerText = `往 ${dest}`;
         
         const container = document.getElementById('detail-stops-container');
@@ -926,65 +945,135 @@
         loading.style.display = 'block';
 
         try {
-            const stopsRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${bound}/1`);
-            const stopsData = await stopsRes.json();
-
-            const etaRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/1`);
-            const etaData = await etaRes.json();
-
-            const boundCode = bound === 'outbound' ? 'O' : 'I';
+            let stopsData = { data: [] };
             let etaMap = {};
-            if (etaData && etaData.data) {
-                etaData.data.forEach(e => {
-                    if (e.dir === boundCode && e.eta) {
-                        let seqStr = String(e.seq);
-                        if (!etaMap[seqStr]) etaMap[seqStr] = [];
-                        etaMap[seqStr].push(e.eta);
-                    }
+            const boundCode = bound === 'outbound' ? 'O' : 'I';
+
+            if (isCitybus) {
+                // 1. 城巴邏輯
+                stopsData.data = await getRouteStopsCached(route, bound, true);
+                
+                // 平行取得所有車站 ETA
+                const etaPromises = stopsData.data.map(async (s) => {
+                    try {
+                        let etaRes = await fetch(`https://rt.data.gov.hk/v1/transport/citybus-nwfb/eta/CTB/${s.stop}/${route}`);
+                        let etaObj = await etaRes.json();
+                        if (etaObj && etaObj.data) {
+                            etaObj.data.forEach(e => {
+                                if (e.dir === boundCode && e.eta) {
+                                    let seqStr = String(s.seq);
+                                    if (!etaMap[seqStr]) etaMap[seqStr] = [];
+                                    etaMap[seqStr].push(e.eta);
+                                }
+                            });
+                        }
+                    } catch(err){}
                 });
+                await Promise.all(etaPromises);
+
+            } else {
+                // 2. 九巴邏輯
+                const stopsRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-stop/${route}/${bound}/1`);
+                stopsData = await stopsRes.json();
+
+                const etaRes = await fetch(`https://data.etabus.gov.hk/v1/transport/kmb/route-eta/${route}/1`);
+                const etaObj = await etaRes.json();
+
+                if (etaObj && etaObj.data) {
+                    etaObj.data.forEach(e => {
+                        if (e.dir === boundCode && e.eta) {
+                            let seqStr = String(e.seq);
+                            if (!etaMap[seqStr]) etaMap[seqStr] = [];
+                            etaMap[seqStr].push(e.eta);
+                        }
+                    });
+                }
             }
 
-            let html = '<div style="background: var(--card-bg); min-height: 100%; padding-bottom: 20px;">';
-
-            stopsData.data.forEach((s) => {
-                let stopName = window.globalStopsMap[s.stop] || s.stop;
-                
-                // 判斷是否為目標車站 (科學園, 雲滙, 天賦海灣 等)
-                let isTargetStation = targetKeywords.some(kw => stopName.includes(kw));
-                
-                let badge = isTargetStation ? `<span style="font-size:0.75rem; background:#34C759; color:white; padding:2px 8px; border-radius:6px; margin-left:8px; vertical-align:middle; font-weight:600;">目標車站</span>` : '';
-                let bgStyle = isTargetStation ? 'background: rgba(52,199,89,0.05); border-left: 4px solid #34C759;' : 'background: var(--card-bg); border-left: 4px solid transparent;';
-                
+            let processedStops = stopsData.data.map(s => {
                 let stopEtas = etaMap[String(s.seq)] || [];
                 let sortedEtas = stopEtas.sort((a, b) => new Date(a) - new Date(b)).slice(0, 3);
-                
-                let etaHtml = '';
-                if (sortedEtas.length > 0) {
-                    etaHtml = sortedEtas.map((eta) => {
-                        let mins = getMins(eta);
-                        let isUrgent = mins === '即將' || mins === '0分' || mins === '1分' || mins === '2分';
-                        let colorStr = isUrgent ? '#FF3B30' : '#34C759';
-                        let bgStr = isUrgent ? 'rgba(255,59,48,0.1)' : 'rgba(52,199,89,0.1)';
-                        return `<span style="font-size:0.9rem; color:${colorStr}; background:${bgStr}; padding:4px 8px; border-radius:6px; margin-left:6px; font-weight:700;">${mins}</span>`;
-                    }).join('');
-                } else {
-                    etaHtml = `<span style="font-size:0.85rem; color:var(--text-sub); margin-left: 12px;">暫無班次</span>`;
-                }
-
-                // 移除站點 ID，保持乾淨
-                html += `
-                <div style="padding: 16px 16px 16px 12px; border-bottom: 1px solid var(--separator); ${bgStyle} display: flex; flex-direction: column; justify-content: center;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div style="flex: 1; padding-right: 12px; font-size: 1.05rem; font-weight: 700; color: var(--text-main); line-height: 1.3;">
-                            <span style="display:inline-block; width:24px; font-size:0.85rem; font-weight:600; color:var(--text-sub); text-align:left;">${s.seq}.</span>
-                            ${stopName} ${badge}
-                        </div>
-                        <div style="display: flex; align-items: center; white-space: nowrap;">
-                            ${etaHtml}
-                        </div>
-                    </div>
-                </div>`;
+                return { ...s, sortedEtas };
             });
+
+            let activeStops = processedStops.filter(s => s.sortedEtas.length > 0);
+            let inactiveStops = processedStops.filter(s => s.sortedEtas.length === 0);
+            
+            let html = '<div style="background: var(--bg-color); min-height: 100%; padding-bottom: 20px;">';
+
+            if (activeStops.length > 0) {
+                html += '<div style="background: var(--card-bg); border-top: 1px solid var(--separator); box-shadow: 0 4px 12px rgba(0,0,0,0.04); margin-bottom: 24px;">';
+                
+                activeStops.forEach((s) => {
+                    let stopName = window.globalStopsMap[s.stop] || s.stop;
+                    let isTargetStation = targetKeywords.some(kw => stopName.includes(kw));
+                    let badge = isTargetStation ? `<span style="font-size:0.75rem; background:#34C759; color:white; padding:2px 8px; border-radius:6px; margin-left:8px; vertical-align:middle; font-weight:600;">目標車站</span>` : '';
+                    let bgStyle = isTargetStation ? 'background: rgba(52,199,89,0.05); border-left: 4px solid #34C759;' : 'background: var(--card-bg); border-left: 4px solid transparent;';
+                    
+                    let etaHtml = '';
+                    if (s.sortedEtas.length > 0) {
+                        let firstMins = getMins(s.sortedEtas[0]);
+                        let isUrgent = firstMins === '即將' || firstMins === '0分' || firstMins === '1分' || firstMins === '2分';
+                        let firstNumColor = isUrgent ? 'var(--kmb-red)' : 'var(--text-main)';
+
+                        let firstHtml = '';
+                        if (firstMins === '即將') {
+                            firstHtml = `<span style="color:${firstNumColor}; font-size:1.1rem;">即將</span>`;
+                        } else {
+                            let num = firstMins.replace('分', '');
+                            firstHtml = `<span style="color:${firstNumColor}; font-size:1.25rem;">${num}</span><span style="font-size:0.8rem; color:var(--text-main); margin-left:2px;">分鐘</span>`;
+                        }
+
+                        let subsHtml = s.sortedEtas.slice(1).map(eta => {
+                            let m = getMins(eta).replace('分', '');
+                            if (m === '即將') m = '0';
+                            return `<span style="font-size:1.1rem; color:var(--text-main); margin-left:10px;">${m}</span>`;
+                        }).join('');
+
+                        etaHtml = `<div style="display:flex; align-items:baseline; font-weight:700; font-family: 'Arial', sans-serif;">${firstHtml}${subsHtml}</div>`;
+                    }
+
+                    html += `
+                    <div style="padding: 16px 16px 16px 12px; border-bottom: 1px solid var(--separator); ${bgStyle} display: flex; flex-direction: column; justify-content: center;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="flex: 1; padding-right: 12px; font-size: 1.05rem; font-weight: 700; color: var(--text-main); line-height: 1.3;">
+                                <span style="display:inline-block; width:24px; font-size:0.85rem; font-weight:600; color:var(--text-sub); text-align:left;">${s.seq}.</span>
+                                ${stopName} ${badge}
+                            </div>
+                            <div style="display: flex; align-items: center; white-space: nowrap;">
+                                ${etaHtml}
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            } else {
+                html += '<div class="status-msg" style="padding: 20px;">目前沒有營運中的班次。</div>';
+            }
+
+            // 無班次車站墊底 (移除刪除線)
+            if (inactiveStops.length > 0) {
+                html += `
+                <div style="background: var(--bg-color); padding: 12px 16px; font-size: 0.85rem; font-weight: 700; color: var(--text-sub); border-bottom: 1px solid var(--separator); border-top: 1px solid var(--separator); display:flex; align-items:center;">
+                    <div style="flex:1; height:1px; background:var(--separator); margin-right:12px;"></div>
+                    暫停服務 / 未有班次之車站
+                    <div style="flex:1; height:1px; background:var(--separator); margin-left:12px;"></div>
+                </div>
+                <div style="background: var(--card-bg); opacity: 0.55;">
+                `;
+
+                inactiveStops.forEach((s) => {
+                    let stopName = window.globalStopsMap[s.stop] || s.stop;
+                    html += `
+                    <div style="padding: 12px 16px 12px 12px; border-bottom: 1px solid var(--separator);">
+                        <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-sub); line-height: 1.4;">
+                            <span style="display:inline-block; width:26px; font-size:0.85rem; font-weight:600;">${s.seq}.</span>
+                            <span>${stopName}</span>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
             
             html += '</div>';
 
